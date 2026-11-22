@@ -1,3 +1,5 @@
+import { translateServerMessage } from '../locales/server'
+
 const parseJSONSafe = (text) => {
   if (typeof text !== 'string' || text.trim() === '') {
     return null
@@ -13,8 +15,8 @@ const buildResponseError = (status, payload) => {
   const message =
     (payload && typeof payload === 'object' && payload.error) ||
     (payload && typeof payload === 'object' && payload.message) ||
-    `请求失败 (${status})`
-  return new Error(String(message))
+    `Yêu cầu  không thành công (${status})`
+  return new Error(translateServerMessage(String(message)))
 }
 
 const normalizeSSEDataLine = (line) => {
@@ -28,7 +30,7 @@ const normalizeSSEDataLine = (line) => {
 const readSSE = async (response, onEvent) => {
   const reader = response.body?.getReader()
   if (!reader) {
-    throw new Error('浏览器不支持流式读取')
+    throw new Error('Trình duyệt  không hỗ trợ đọc trực tuyến')
   }
 
   const decoder = new TextDecoder('utf-8')
@@ -49,6 +51,11 @@ const readSSE = async (response, onEvent) => {
 
     lastEvent = eventName || 'message'
     lastPayload = data
+    if (lastEvent === 'error' && data && typeof data === 'object') {
+      for (const key of ['error', 'message']) {
+        if (typeof data[key] === 'string') data[key] = translateServerMessage(data[key])
+      }
+    }
     if (typeof onEvent === 'function') {
       onEvent(lastEvent, data)
     }
@@ -117,7 +124,7 @@ export const postJSONWithSSE = async ({
   onEvent
 }) => {
   if (!url) {
-    throw new Error('请求地址不能为空')
+    throw new Error('Địa chỉ yêu cầu không được để trống')
   }
 
   const controller = new AbortController()
@@ -148,7 +155,7 @@ export const postJSONWithSSE = async ({
     if (contentType.includes('text/event-stream')) {
       const streamResult = await readSSE(response, onEvent)
       if (!response.ok) {
-        throw new Error(`请求失败 (${response.status})`)
+        throw new Error(`Yêu cầu  không thành công (${response.status})`)
       }
       return {
         mode: 'sse',
@@ -170,7 +177,7 @@ export const postJSONWithSSE = async ({
     }
   } catch (error) {
     if (error && error.name === 'AbortError') {
-      throw new Error('请求超时')
+      throw new Error('Hết thời gian yêu cầu')
     }
     throw error
   } finally {

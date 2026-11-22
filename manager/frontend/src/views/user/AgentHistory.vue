@@ -9,15 +9,15 @@
           size="large"
         />
         <div class="header-context">
-          <span class="context-label">当前智能体</span>
-          <strong class="context-value">{{ agentName || '未命名智能体' }}</strong>
-          <p class="context-meta" v-if="total > 0">共 {{ total }} 条消息</p>
+          <span class="context-label">Trợ lý AI hiện tại của</span>
+          <strong class="context-value">{{ agentName || 'Trợ lý AI chưa được đặt tên' }}</strong>
+          <p class="context-meta" v-if="total > 0">Tổng số {{ total }} tin nhắn</p>
         </div>
       </div>
       <div class="header-right">
         <el-button @click="handleExport" :loading="exporting">
           <el-icon><Download /></el-icon>
-          导出记录
+          Hồ sơ xuất khẩu
         </el-button>
       </div>
     </div>
@@ -25,16 +25,16 @@
     <!-- 筛选面板 -->
     <el-card class="filter-card" shadow="never">
       <el-form :model="filters" inline>
-        <el-form-item label="角色">
-          <el-select v-model="filters.role" placeholder="全部" clearable style="width: 120px">
-            <el-option label="全部" value="" />
-            <el-option label="用户" value="user" />
-            <el-option label="机器人" value="assistant" />
+        <el-form-item label="Vai trò">
+          <el-select v-model="filters.role" placeholder="Tất cả" clearable style="width: 120px">
+            <el-option label="Tất cả" value="" />
+            <el-option label="Người dùng" value="user" />
+            <el-option label="Robot" value="assistant" />
           </el-select>
         </el-form-item>
-        <el-form-item label="设备">
-          <el-select v-model="filters.device_id" placeholder="全部" clearable style="width: 150px">
-            <el-option label="全部" value="" />
+        <el-form-item label="Thiết bị">
+          <el-select v-model="filters.device_id" placeholder="Tất cả" clearable style="width: 150px">
+            <el-option label="Tất cả" value="" />
             <el-option 
               v-for="device in devices" 
               :key="device.id" 
@@ -43,22 +43,22 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="开始日期">
+        <el-form-item label="Ngày bắt đầu">
           <el-date-picker
             v-model="filters.start_date"
             type="date"
-            placeholder="选择日期"
+            placeholder="Chọn ngày"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             style="width: 150px"
             clearable
           />
         </el-form-item>
-        <el-form-item label="结束日期">
+        <el-form-item label="Ngày kết thúc">
           <el-date-picker
             v-model="filters.end_date"
             type="date"
-            placeholder="选择日期"
+            placeholder="Chọn ngày"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             style="width: 150px"
@@ -66,8 +66,8 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">Truy vấn</el-button>
+          <el-button @click="handleReset">Đặt lại</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -75,7 +75,7 @@
     <!-- 消息列表 - 微信风格 -->
     <el-card class="messages-card" shadow="never" v-loading="loading">
       <div v-if="messages.length === 0" class="empty-state">
-        <el-empty description="暂无聊天记录" />
+        <el-empty description="Chưa có lịch sử trò chuyện" />
       </div>
       <div v-else class="chat-container">
         <div class="chat-messages" ref="chatMessagesRef">
@@ -119,7 +119,7 @@
                         <el-icon class="message-more"><MoreFilled /></el-icon>
                         <template #dropdown>
                           <el-dropdown-menu>
-                            <el-dropdown-item :command="{action: 'delete', id: message.id}">删除</el-dropdown-item>
+                            <el-dropdown-item :command="{action: 'delete', id: message.id}">Xóa</el-dropdown-item>
                           </el-dropdown-menu>
                         </template>
                       </el-dropdown>
@@ -155,7 +155,7 @@
                         <el-icon class="message-more"><MoreFilled /></el-icon>
                         <template #dropdown>
                           <el-dropdown-menu>
-                            <el-dropdown-item :command="{action: 'delete', id: message.id}">删除</el-dropdown-item>
+                            <el-dropdown-item :command="{action: 'delete', id: message.id}">Xóa</el-dropdown-item>
                           </el-dropdown-menu>
                         </template>
                       </el-dropdown>
@@ -235,16 +235,16 @@ const audioBlobUrls = ref({}) // 存储音频 Blob URL
 // 加载智能体信息
 const loadAgent = async () => {
   if (!agentId.value) {
-    ElMessage.error('智能体ID无效')
+    ElMessage.error('ID trợ lý AI của  không hợp lệ')
     router.back()
     return
   }
   try {
     const response = await api.get(`/user/agents/${agentId.value}`)
-    agentName.value = response.data.data?.name || '智能体'
+    agentName.value = response.data.data?.name || 'Trợ lý AI'
   } catch (error) {
     console.error('加载智能体信息失败:', error)
-    ElMessage.error('加载智能体信息失败')
+    ElMessage.error('không tải được thông tin trợ lý AI')
   }
 }
 
@@ -287,7 +287,7 @@ const loadMessages = async () => {
     await nextTick()
     scrollToBottom()
   } catch (error) {
-    ElMessage.error('加载消息列表失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('không tải được danh sách tin nhắn: ' + (error.response?.data?.error || error.message))
     console.error('加载消息列表失败:', error)
     messages.value = []
     total.value = 0
@@ -327,19 +327,19 @@ const handleSizeChange = (size) => {
 // 删除消息
 const handleDelete = async (messageId) => {
   try {
-    await ElMessageBox.confirm('确定要删除这条消息吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('Bạn có chắc chắn muốn xóa tin nhắn này không?', 'Thông báo', {
+      confirmButtonText: 'Xác nhận',
+      cancelButtonText: 'Hủy',
       type: 'warning'
     })
     
     deletingId.value = messageId
     await api.delete(`/user/history/messages/${messageId}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Đã xóa')
     loadMessages()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('Không thể xóa')
       console.error('删除消息失败:', error)
     }
   } finally {
@@ -374,9 +374,9 @@ const handleExport = async () => {
     link.remove()
     window.URL.revokeObjectURL(url)
     
-    ElMessage.success('导出成功')
+    ElMessage.success('đã xuất thành công')
   } catch (error) {
-    ElMessage.error('导出失败')
+    ElMessage.error('Xuất  không thành công')
     console.error('导出失败:', error)
   } finally {
     exporting.value = false
@@ -386,7 +386,7 @@ const handleExport = async () => {
 // 格式化时间（完整）
 const formatTime = (dateString) => {
   const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString('vi-VN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -405,7 +405,7 @@ const formatTimeShort = (dateString) => {
   
   // 如果是今天，只显示时间
   if (msgDate.getTime() === today.getTime()) {
-    return date.toLocaleTimeString('zh-CN', {
+    return date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit'
     })
@@ -415,7 +415,7 @@ const formatTimeShort = (dateString) => {
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
   if (msgDate.getTime() === yesterday.getTime()) {
-    return '昨天 ' + date.toLocaleTimeString('zh-CN', {
+    return 'Hôm qua ' + date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit'
     })
@@ -423,14 +423,14 @@ const formatTimeShort = (dateString) => {
   
   // 如果是今年，显示月日和时间
   if (date.getFullYear() === now.getFullYear()) {
-    return `${date.getMonth() + 1}月${date.getDate()}日 ${date.toLocaleTimeString('zh-CN', {
+    return `${date.getDate()}/${date.getMonth() + 1} ${date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit'
     })}`
   }
   
   // 其他情况显示完整日期和时间
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString('vi-VN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -573,7 +573,7 @@ const toggleAudio = async (messageId) => {
 
 onMounted(async () => {
   if (!agentId.value) {
-    ElMessage.error('智能体ID无效')
+    ElMessage.error('ID trợ lý AI của  không hợp lệ')
     router.push('/user/agents')
     return
   }

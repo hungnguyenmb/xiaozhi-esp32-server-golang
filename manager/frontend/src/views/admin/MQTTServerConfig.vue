@@ -13,31 +13,31 @@
             <div class="card-head">
               <div>
                 <p class="card-kicker">MQTT Server</p>
-                <h3>监听与接入</h3>
-                <p class="card-description">配置内置 MQTT Server 的监听地址和启用状态，供设备与主程序接入。</p>
+                <h3>Giám sát và truy cập</h3>
+                <p class="card-description">định cấu hình địa chỉ nghe và trạng thái bật của Máy chủ MQTT tích hợp để truy cập thiết bị và chương trình chính.</p>
               </div>
               <el-tag :type="serverReady ? 'success' : 'warning'" effect="plain" round>
-                {{ serverReady ? '服务参数完整' : '待补充' }}
+                {{ serverReady ? 'Thông số dịch vụ hoàn chỉnh của' : 'được thêm vào' }}
               </el-tag>
             </div>
           </template>
 
           <div class="field-grid">
-            <el-form-item label="启用状态" prop="enable">
+            <el-form-item label="Trạng thái kích hoạt" prop="enable">
               <div class="switch-field">
                 <div>
-                  <div class="switch-title">启用内置 MQTT Server</div>
-                  <div class="field-help">关闭后将不再监听设备侧 MQTT 连接。</div>
+                  <div class="switch-title">kích hoạt Máy chủ MQTT tích hợp</div>
+                  <div class="field-help">sẽ không còn nghe các kết nối MQTT phía thiết bị sau khi đóng.</div>
                 </div>
                 <el-switch v-model="form.enable" />
               </div>
             </el-form-item>
 
-            <el-form-item label="监听主机" prop="listen_host">
-              <el-input v-model="form.listen_host" placeholder="例如：0.0.0.0" />
+            <el-form-item label="Máy chủ nghe" prop="listen_host">
+              <el-input v-model="form.listen_host" placeholder="Ví dụ: 0.0.0.0" />
             </el-form-item>
 
-            <el-form-item label="监听端口" prop="listen_port">
+            <el-form-item label="Cổng nghe" prop="listen_port">
               <el-input-number v-model="form.listen_port" :min="1" :max="65535" controls-position="right" style="width: 100%" />
             </el-form-item>
           </div>
@@ -49,37 +49,37 @@
               <div class="card-head">
                 <div>
                   <p class="card-kicker">Authentication</p>
-                  <h3>认证与签名</h3>
-                  <p class="card-description">如果启用鉴权，请填写主程序连接 MQTT Server 使用的管理员账号，并保持签名密钥与 OTA 一致。</p>
+                  <h3>Chứng nhận và chữ ký</h3>
+                  <p class="card-description">Nếu xác thực được bật, vui lòng điền vào tài khoản quản trị viên được chương trình chính sử dụng để kết nối với Máy chủ MQTT và giữ khóa ký nhất quán với OTA.</p>
                 </div>
                 <el-tag :type="form.enable_auth ? 'warning' : 'info'" effect="plain" round>
-                  {{ form.enable_auth ? '已启用鉴权' : '匿名接入' }}
+                  {{ form.enable_auth ? 'Đã bật xác thực' : 'Truy cập ẩn danh' }}
                 </el-tag>
               </div>
             </template>
 
             <div class="field-stack">
-              <el-form-item label="启用认证" prop="enable_auth">
+              <el-form-item label="kích hoạt xác thực" prop="enable_auth">
                 <div class="switch-field">
                   <div>
-                    <div class="switch-title">校验 MQTT 用户名密码</div>
-                    <div class="field-help">启用后会在客户端连接时校验用户名和密码。</div>
+                    <div class="switch-title">Xác minh tên người dùng và mật khẩu MQTT</div>
+                    <div class="field-help">Khi được bật, tên người dùng và mật khẩu sẽ được xác minh khi máy khách kết nối.</div>
                   </div>
                   <el-switch v-model="form.enable_auth" />
                 </div>
               </el-form-item>
 
-              <el-form-item label="管理员用户" prop="username">
-                <el-input v-model="form.username" placeholder="未启用鉴权可暂时留空" />
+              <el-form-item label="Người dùng quản trị viên" prop="username">
+                <el-input v-model="form.username" placeholder="Xác thực  chưa được bật và có thể tạm thời để trống." />
               </el-form-item>
 
-              <el-form-item label="管理员密码" prop="password">
-                <el-input v-model="form.password" type="password" placeholder="未启用鉴权可暂时留空" show-password />
+              <el-form-item label="Mật khẩu quản trị viên" prop="password">
+                <el-input v-model="form.password" type="password" placeholder="Xác thực  chưa được bật và có thể tạm thời để trống." show-password />
               </el-form-item>
 
-              <el-form-item label="签名密钥" prop="signature_key">
-                <el-input v-model="form.signature_key" placeholder="请输入与 OTA 保持一致的签名密钥" />
-                <div class="field-help">该密钥需要和 OTA 配置页的签名密钥保持一致。</div>
+              <el-form-item label="Khóa ký" prop="signature_key">
+                <el-input v-model="form.signature_key" placeholder="Vui lòng nhập key ký phù hợp với OTA" />
+                <div class="field-help">Khóa này cần nhất quán với khóa ký trên trang cấu hình OTA.</div>
               </el-form-item>
             </div>
           </el-card>
@@ -89,36 +89,36 @@
               <div class="card-head">
                 <div>
                   <p class="card-kicker">MQTTS</p>
-                  <h3>TLS 配置</h3>
-                  <p class="card-description">需要设备通过 MQTTS 连接时，再启用 TLS 并补齐证书文件路径。</p>
+                  <h3>Cấu hình  TLS</h3>
+                  <p class="card-description">Khi thiết bị cần được kết nối thông qua MQTTS, hãy bật TLS và hoàn thành đường dẫn tệp chứng chỉ.</p>
                 </div>
                 <el-tag :type="form.tls.enable ? 'success' : 'info'" effect="plain" round>
-                  {{ form.tls.enable ? '已启用 TLS' : '未启用 TLS' }}
+                  {{ form.tls.enable ? 'Đã bật  TLS' : 'TLS chưa được kích hoạt' }}
                 </el-tag>
               </div>
             </template>
 
             <div class="field-stack">
-              <el-form-item label="启用 TLS" prop="tls.enable">
+              <el-form-item label="Kích hoạt TLS" prop="tls.enable">
                 <div class="switch-field">
                   <div>
-                    <div class="switch-title">允许设备通过 MQTTS 连接</div>
-                    <div class="field-help">启用后请同时填写 TLS 端口、证书文件和密钥文件。</div>
+                    <div class="switch-title">cho phép thiết bị kết nối qua MQTTS</div>
+                    <div class="field-help">Sau khi  được bật, vui lòng điền cổng TLS, tệp chứng chỉ và tệp khóa cùng lúc.</div>
                   </div>
                   <el-switch v-model="form.tls.enable" />
                 </div>
               </el-form-item>
 
-              <el-form-item label="TLS 端口" prop="tls.port">
+              <el-form-item label="Cổng TLS" prop="tls.port">
                 <el-input-number v-model="form.tls.port" :min="1" :max="65535" controls-position="right" style="width: 100%" />
               </el-form-item>
 
-              <el-form-item label="证书文件" prop="tls.pem">
-                <el-input v-model="form.tls.pem" placeholder="例如：certs/server.pem" />
+              <el-form-item label="Tệp chứng chỉ" prop="tls.pem">
+                <el-input v-model="form.tls.pem" placeholder="Ví dụ: certs/server.pem" />
               </el-form-item>
 
-              <el-form-item label="密钥文件" prop="tls.key">
-                <el-input v-model="form.tls.key" placeholder="例如：certs/server.key" />
+              <el-form-item label="Tệp khóa" prop="tls.key">
+                <el-input v-model="form.tls.key" placeholder="Ví dụ: certs/server.key" />
               </el-form-item>
             </div>
           </el-card>
@@ -127,11 +127,11 @@
 
       <div class="footer-bar">
         <p class="footer-note">
-          保存后会更新默认 MQTT Server 配置；如果同时启用 OTA 的 MQTT 下发，请确认签名密钥保持一致。
+          sẽ cập nhật cấu hình MQTT Server mặc định sau khi lưu; nếu phân phối MQTT của OTA cũng được bật, vui lòng xác nhận rằng các khóa ký là nhất quán.
         </p>
         <div class="footer-actions">
-          <el-button plain :loading="loading" @click="loadConfig">重置为当前配置</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
+          <el-button plain :loading="loading" @click="loadConfig">đặt lại cấu hình hiện tại</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">Lưu cấu hình</el-button>
         </div>
       </div>
     </el-form>
@@ -168,7 +168,7 @@ const form = reactive(createDefaultFormState())
 
 const validateUsername = (_, value, callback) => {
   if (form.enable_auth && !String(value || '').trim()) {
-    callback(new Error('启用认证时管理员用户名不能为空'))
+    callback(new Error('Tên người dùng quản trị viên không được để trống khi xác thực được bật.'))
     return
   }
   callback()
@@ -176,7 +176,7 @@ const validateUsername = (_, value, callback) => {
 
 const validatePassword = (_, value, callback) => {
   if (form.enable_auth && !String(value || '').trim()) {
-    callback(new Error('启用认证时管理员密码不能为空'))
+    callback(new Error('Mật khẩu quản trị viên không thể để trống khi xác thực được bật.'))
     return
   }
   callback()
@@ -184,7 +184,7 @@ const validatePassword = (_, value, callback) => {
 
 const validateTlsPort = (_, value, callback) => {
   if (form.tls.enable && (!value || value < 1 || value > 65535)) {
-    callback(new Error('启用 TLS 时端口号必须在 1-65535 之间'))
+    callback(new Error('Khi bật TLS, số cổng phải nằm trong khoảng 1-65535'))
     return
   }
   callback()
@@ -192,7 +192,7 @@ const validateTlsPort = (_, value, callback) => {
 
 const validateTlsPem = (_, value, callback) => {
   if (form.tls.enable && !String(value || '').trim()) {
-    callback(new Error('启用 TLS 时证书文件路径不能为空'))
+    callback(new Error('Đường dẫn tệp chứng chỉ không thể trống khi bật TLS'))
     return
   }
   callback()
@@ -200,21 +200,21 @@ const validateTlsPem = (_, value, callback) => {
 
 const validateTlsKey = (_, value, callback) => {
   if (form.tls.enable && !String(value || '').trim()) {
-    callback(new Error('启用 TLS 时密钥文件路径不能为空'))
+    callback(new Error('Đường dẫn tệp chính không thể trống khi bật TLS'))
     return
   }
   callback()
 }
 
 const rules = {
-  listen_host: [{ required: true, message: '请输入监听主机地址', trigger: 'blur' }],
+  listen_host: [{ required: true, message: 'Vui lòng nhập địa chỉ máy chủ nghe', trigger: 'blur' }],
   listen_port: [
-    { required: true, message: '请输入监听端口号', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口号必须在 1-65535 之间', trigger: 'blur' }
+    { required: true, message: 'Vui lòng nhập số cổng nghe', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: 'Số cổng  phải nằm trong khoảng 1-65535', trigger: 'blur' }
   ],
   username: [{ validator: validateUsername, trigger: 'blur' }],
   password: [{ validator: validatePassword, trigger: 'blur' }],
-  signature_key: [{ required: true, message: '请输入签名密钥', trigger: 'blur' }],
+  signature_key: [{ required: true, message: 'Vui lòng nhập key ký', trigger: 'blur' }],
   'tls.port': [{ validator: validateTlsPort, trigger: 'blur' }],
   'tls.pem': [{ validator: validateTlsPem, trigger: 'blur' }],
   'tls.key': [{ validator: validateTlsKey, trigger: 'blur' }]
@@ -242,7 +242,7 @@ const loadConfig = async () => {
       try {
         configData = JSON.parse(config.json_data || '{}')
       } catch (error) {
-        ElMessage.warning('MQTT Server 配置格式异常，已回退到默认值')
+        ElMessage.warning('Định dạng cấu hình máy chủ  MQTT không bình thường và đã được khôi phục về giá trị mặc định')
         configData = {}
       }
 
@@ -262,7 +262,7 @@ const loadConfig = async () => {
       resetForm()
     }
   } catch (error) {
-    ElMessage.error(error.response?.data?.message || '加载 MQTT Server 配置失败')
+    ElMessage.error(error.response?.data?.message || 'Không tải được cấu hình Máy chủ MQTT')
   } finally {
     loading.value = false
   }
@@ -304,16 +304,16 @@ const handleSave = async () => {
 
     if (configId.value) {
       await api.put(`/admin/mqtt-server-configs/${configId.value}`, payload)
-      ElMessage.success('MQTT Server 配置已更新')
+      ElMessage.success('Cấu hình máy chủ  MQTT đã được cập nhật')
     } else {
       const response = await api.post('/admin/mqtt-server-configs', payload)
       configId.value = response.data?.data?.id || configId.value
-      ElMessage.success('MQTT Server 配置已保存')
+      ElMessage.success('Đã lưu cấu hình máy chủ  MQTT')
     }
 
     await loadConfig()
   } catch (error) {
-    ElMessage.error(error.response?.data?.message || '保存 MQTT Server 配置失败')
+    ElMessage.error(error.response?.data?.message || 'Không lưu được cấu hình Máy chủ MQTT')
   } finally {
     saving.value = false
   }

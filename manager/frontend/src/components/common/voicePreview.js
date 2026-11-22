@@ -19,5 +19,5 @@ export async function extractPreviewError(error) {
   } else if (data?.error) {
     return String(data.error)
   }
-  return String(error?.message || '合成试听音频失败')
+  return String(error?.message || 'Không thể tạo âm thanh nghe thử')
 }

@@ -4,12 +4,12 @@
     <div class="filter-bar">
       <el-select
         v-model="filterAgentId"
-        placeholder="按智能体筛选"
+        placeholder="Lọc bằng trợ lý AI"
         clearable
         style="width: 200px; margin-right: 10px;"
         @change="loadSpeakerGroups"
       >
-        <el-option label="全部智能体" value="" />
+        <el-option label="Tất cả trợ lý AI" value="" />
         <el-option
           v-for="agent in agents"
           :key="agent.id"
@@ -19,7 +19,7 @@
       </el-select>
       <el-input
         v-model="searchKeyword"
-        placeholder="搜索声纹组名称"
+        placeholder="Tìm kiếm tên nhóm nhận diện người nói"
         clearable
         style="width: 250px;"
         @input="handleSearch"
@@ -30,16 +30,16 @@
       </el-input>
       <el-button class="create-group-button" type="primary" @click="handleAddGroup">
         <el-icon><Plus /></el-icon>
-        创建声纹组
+        Tạo nhóm nhận diện người nói
       </el-button>
     </div>
 
     <!-- 声纹组列表 -->
     <div v-loading="loading" class="speakers-content">
       <el-table :data="filteredGroups" stripe style="width: 100%">
-        <el-table-column prop="name" label="声纹组名称" min-width="150" />
-        <el-table-column prop="agent_name" label="关联智能体" min-width="120" />
-        <el-table-column label="Prompt" min-width="200">
+        <el-table-column prop="name" label="Tên nhóm nhận diện người nói" min-width="150" />
+        <el-table-column prop="agent_name" label="Trợ lý AI liên kết" min-width="120" />
+        <el-table-column label="Lời nhắc" min-width="200">
           <template #default="{ row }">
             <el-popover
               placement="top"
@@ -55,17 +55,17 @@
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="sample_count" label="样本数量" width="100" align="center">
+        <el-table-column prop="sample_count" label="Số lượng mẫu" width="100" align="center">
           <template #default="{ row }">
             <el-tag type="info">{{ row.sample_count }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
+        <el-table-column prop="created_at" label="Thời gian tạo" width="180">
           <template #default="{ row }">
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="Thao tác" width="360" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
             <el-button
@@ -74,7 +74,7 @@
               @click="handleVerifyGroup(row)"
             >
               <el-icon><VideoPlay /></el-icon>
-              验证
+              Xác minh
             </el-button>
             <el-button
               type="primary"
@@ -82,7 +82,7 @@
               @click="handleViewSamples(row)"
             >
               <el-icon><View /></el-icon>
-              管理声纹
+              Quản lý người nói
             </el-button>
               <el-button
                 type="primary"
@@ -91,7 +91,7 @@
                 @click="handleEditGroup(row)"
               >
                   <el-icon><Edit /></el-icon>
-                  编辑
+                  Chỉnh sửa
                 </el-button>
               <el-button
                 type="danger"
@@ -99,7 +99,7 @@
                 @click="handleDeleteGroup(row)"
               >
                 <el-icon><Delete /></el-icon>
-                删除
+                Xóa
                 </el-button>
               </div>
           </template>
@@ -107,14 +107,14 @@
       </el-table>
 
       <div v-if="filteredGroups.length === 0 && !loading" class="empty-state">
-        <el-empty description="暂无声纹组数据" />
+        <el-empty description="chưa có dữ liệu nhóm nhận diện người nói." />
       </div>
     </div>
 
     <!-- 创建/编辑声纹组对话框 -->
     <el-dialog
       v-model="showGroupDialog"
-      :title="groupDialogMode === 'add' ? '创建声纹组' : '编辑声纹组'"
+      :title="groupDialogMode === 'add' ? 'Tạo nhóm nhận dạng loa' : 'Chỉnh sửa nhóm nhận dạng loa'"
       width="600px"
     >
       <el-form
@@ -123,10 +123,10 @@
         :rules="groupRules"
         label-width="100px"
       >
-        <el-form-item label="关联智能体" prop="agent_id">
+        <el-form-item label="Trợ lý AI liên kết" prop="agent_id">
           <el-select
             v-model="groupForm.agent_id"
-            placeholder="请选择智能体"
+            placeholder="Chọn trợ lý AI"
             style="width: 100%"
           >
             <el-option
@@ -137,33 +137,33 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="声纹名称" prop="name">
+        <el-form-item label="Tên nhận diện người nói" prop="name">
           <el-input
             v-model="groupForm.name"
-            placeholder="请输入声纹名称"
+            placeholder="Vui lòng nhập tên nhận diện người nói"
             :maxlength="100"
             show-word-limit
           />
         </el-form-item>
-        <el-form-item label="Prompt" prop="prompt">
+        <el-form-item label="Lời nhắc" prop="prompt">
           <el-input
             v-model="groupForm.prompt"
             type="textarea"
             :rows="4"
-            placeholder="请输入角色提示词（可选）"
+            placeholder="Vui lòng nhập lời nhắc vai trò (tùy chọn)"
           />
         </el-form-item>
-        <el-form-item label="描述" prop="description">
+        <el-form-item label="Mô tả" prop="description">
           <el-input
             v-model="groupForm.description"
             type="textarea"
             :rows="3"
-            placeholder="请输入描述信息（可选）"
+            placeholder="Vui lòng nhập thông tin mô tả (tùy chọn)"
             :maxlength="200"
             show-word-limit
           />
         </el-form-item>
-        <el-form-item label="我复刻的音色" v-if="cloneVoicePresets.length > 0">
+        <el-form-item label="Giọng nói sao chép của tôi" v-if="cloneVoicePresets.length > 0">
           <div class="clone-voice-line" v-loading="cloneVoicesLoading">
             <button
               v-for="clone in cloneVoicePresets"
@@ -177,12 +177,12 @@
               <span class="clone-voice-name">{{ clone.name || clone.provider_voice_id }}</span>
             </button>
           </div>
-          <div class="form-help">点击后会自动填充 TTS 配置和音色</div>
+          <div class="form-help">sẽ tự động điền cấu hình và giọng nói TTS sau khi nhấp vào</div>
         </el-form-item>
-        <el-form-item label="TTS配置" prop="tts_config_id">
+        <el-form-item label="Cấu hình TTS" prop="tts_config_id">
           <el-select
             v-model="groupForm.tts_config_id"
-            placeholder="请选择TTS配置（可选）"
+            placeholder="Vui lòng chọn cấu hình TTS (tùy chọn)"
             clearable
             style="width: 100%"
             @change="handleTtsConfigChange"
@@ -190,24 +190,24 @@
             <el-option
               v-for="ttsConfig in ttsConfigs"
               :key="ttsConfig.config_id"
-              :label="ttsConfig.is_default ? `${ttsConfig.name} (默认)` : ttsConfig.name"
+              :label="ttsConfig.is_default ? `${ttsConfig.name} (mặc định)` : ttsConfig.name"
               :value="ttsConfig.config_id"
             >
               <div class="config-option">
                 {{ ttsConfig.name }}
-                <el-tag v-if="ttsConfig.is_default" type="success" size="small" style="margin-left: 8px;">默认</el-tag>
+                <el-tag v-if="ttsConfig.is_default" type="success" size="small" style="margin-left: 8px;">Mặc định</el-tag>
               </div>
-              <span class="config-desc">{{ ttsConfig.provider || '暂无描述' }}</span>
+              <span class="config-desc">{{ ttsConfig.provider || 'Chưa có mô tả' }}</span>
             </el-option>
           </el-select>
           <div class="form-help" v-if="groupForm.tts_config_id">
             {{ getCurrentTtsConfigInfo() }}
           </div>
         </el-form-item>
-        <el-form-item label="音色" prop="voice" v-if="groupForm.tts_config_id">
+        <el-form-item label="Giọng nói" prop="voice" v-if="groupForm.tts_config_id">
           <el-select
             v-model="groupForm.voice"
-            placeholder="请选择或输入音色"
+            placeholder="Vui lòng chọn hoặc nhập giọng nói"
             filterable
             allow-create
             clearable
@@ -221,14 +221,14 @@
             />
           </el-select>
           <div class="form-help">
-            当前TTS配置: {{ getCurrentTtsConfigName() }}，可以搜索音色名称或值，也可以手动输入自定义音色值。
+            Cấu hình TTS hiện tại của : {{ getCurrentTtsConfigName() }}, bạn có thể tìm kiếm tên hoặc giá trị giọng nói hoặc bạn có thể nhập giá trị giọng nói tùy chỉnh theo cách thủ công.
           </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showGroupDialog = false">取消</el-button>
+        <el-button @click="showGroupDialog = false">Hủy</el-button>
         <el-button type="primary" @click="handleSubmitGroup" :loading="submitting">
-          {{ groupDialogMode === 'add' ? '创建' : '保存' }}
+          {{ groupDialogMode === 'add' ? 'Tạo bởi' : 'Lưu' }}
         </el-button>
       </template>
     </el-dialog>
@@ -236,7 +236,7 @@
     <!-- 样本管理弹层 -->
     <el-drawer
       v-model="showSampleDrawer"
-      title="样本管理"
+      title="Quản lý mẫu"
       :size="800"
       :before-close="handleCloseSampleDrawer"
     >
@@ -250,7 +250,7 @@
               <p>{{ currentGroup.prompt }}</p>
             </div>
             <div v-if="currentGroup.description" class="description-section">
-              <strong>描述:</strong>
+              <strong>Mô tả:</strong>
               <p>{{ currentGroup.description }}</p>
             </div>
           </div>
@@ -259,15 +259,15 @@
         <!-- 样本列表 -->
         <div class="samples-section">
           <div class="samples-header">
-            <h4>样本列表</h4>
+            <h4>Danh sách mẫu</h4>
             <div class="samples-header-actions">
               <el-button type="success" @click="handleVerifyFromSamples">
                 <el-icon><VideoPlay /></el-icon>
-                验证声纹
+                Xác minh nhận diện người nói
               </el-button>
               <el-button type="primary" @click="handleAddSample">
                 <el-icon><Plus /></el-icon>
-                上传新样本
+                tải lên mẫu mới
               </el-button>
             </div>
           </div>
@@ -288,23 +288,23 @@
                 </el-button>
               </template>
             </el-table-column>
-            <el-table-column prop="file_name" label="文件名" min-width="150" />
-            <el-table-column prop="file_size" label="文件大小" width="100">
+            <el-table-column prop="file_name" label="Tên tệp" min-width="150" />
+            <el-table-column prop="file_size" label="Kích thước tệp" width="100">
               <template #default="{ row }">
                 {{ formatFileSize(row.file_size) }}
               </template>
             </el-table-column>
-            <el-table-column prop="duration" label="时长" width="80">
+            <el-table-column prop="duration" label="Thời lượng" width="80">
               <template #default="{ row }">
                 {{ row.duration ? row.duration + 's' : '-' }}
               </template>
             </el-table-column>
-            <el-table-column prop="created_at" label="创建时间" width="180">
+            <el-table-column prop="created_at" label="Thời gian tạo" width="180">
               <template #default="{ row }">
                 {{ formatDate(row.created_at) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
+            <el-table-column label="Thao tác" width="180" fixed="right">
               <template #default="{ row }">
                 <el-button
                   type="primary"
@@ -313,7 +313,7 @@
                   @click="handlePlaySample(row)"
                 >
                   <el-icon><VideoPlay /></el-icon>
-                  播放
+                  Chơi
                 </el-button>
                 <el-button
                   type="primary"
@@ -322,7 +322,7 @@
                   @click="handleDownloadSample(row)"
                 >
                   <el-icon><Download /></el-icon>
-                  下载
+                  Tải xuống
                 </el-button>
                 <el-button
                   type="danger"
@@ -331,14 +331,14 @@
                   @click="handleDeleteSample(row)"
                 >
                   <el-icon><Delete /></el-icon>
-                  删除
+                  Xóa
                 </el-button>
               </template>
             </el-table-column>
           </el-table>
 
           <div v-if="samples.length === 0" class="empty-samples">
-            <el-empty description="暂无样本，请上传音频文件" />
+            <el-empty description="Chưa có mẫu, vui lòng tải lên tệp âm thanh" />
           </div>
         </div>
       </div>
@@ -347,19 +347,19 @@
     <!-- 上传样本对话框 -->
     <el-dialog
       v-model="showUploadDialog"
-      title="添加声纹样本"
+      title="Thêm mẫu nhận diện người nói"
       width="600px"
       :before-close="handleCloseUploadDialog"
     >
       <el-tabs v-model="uploadMode" class="upload-tabs">
         <!-- 从历史记录选择 -->
-        <el-tab-pane label="从历史记录选择" name="history">
+        <el-tab-pane label="Chọn từ lịch sử" name="history">
           <div class="history-section">
             <el-form :model="historyForm" label-width="100px">
-              <el-form-item label="智能体">
+              <el-form-item label="Trợ lý AI">
                 <el-select
                   v-model="historyForm.agent_id"
-                  placeholder="请选择智能体"
+                  placeholder="Chọn trợ lý AI"
                   style="width: 100%"
                   @change="loadHistoryMessages"
                   clearable
@@ -376,7 +376,7 @@
             
             <div v-loading="loadingHistory" class="history-list">
               <div v-if="historyMessages.length === 0 && !loadingHistory" class="empty-history">
-                <el-empty description="暂无历史聊天记录，请先选择智能体" />
+                <el-empty description="Không có bản ghi trò chuyện lịch sử, vui lòng chọn trợ lý AI trước" />
               </div>
               <el-table
                 v-else
@@ -387,7 +387,7 @@
                 max-height="400"
                 @row-click="handleSelectHistoryMessage"
               >
-                <el-table-column label="选择" width="80" align="center">
+                <el-table-column label="Chọn" width="80" align="center">
                   <template #default="{ row }">
                     <el-radio
                       :model-value="historyForm.selected_message_id"
@@ -396,24 +396,24 @@
                     />
                   </template>
                 </el-table-column>
-                <el-table-column prop="content" label="消息内容" min-width="200">
+                <el-table-column prop="content" label="Nội dung tin nhắn" min-width="200">
                   <template #default="{ row }">
                     <div class="message-content">{{ truncateText(row.content, 50) }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="device_id" label="设备ID" width="150">
+                <el-table-column prop="device_id" label="ID thiết bị" width="150">
                   <template #default="{ row }">
                     <el-tooltip :content="row.device_id" placement="top">
                       <span>{{ truncateId(row.device_id) }}</span>
                     </el-tooltip>
                   </template>
                 </el-table-column>
-                <el-table-column prop="created_at" label="时间" width="180">
+                <el-table-column prop="created_at" label="thời gian" width="180">
                   <template #default="{ row }">
                     {{ formatDate(row.created_at) }}
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="100">
+                <el-table-column label="Thao tác" width="100">
                   <template #default="{ row }">
                     <el-button
                       type="primary"
@@ -422,7 +422,7 @@
                       @click.stop="handlePreviewHistoryAudio(row)"
                     >
                       <el-icon><VideoPlay /></el-icon>
-                      试听
+                      Nghe thử
                     </el-button>
                   </template>
                 </el-table-column>
@@ -432,7 +432,7 @@
         </el-tab-pane>
         
         <!-- 上传文件 -->
-        <el-tab-pane label="上传文件" name="upload">
+        <el-tab-pane label="Tệp tải lên" name="upload">
           <el-form
             ref="uploadFormRef"
             :model="uploadForm"
@@ -452,11 +452,11 @@
           >
                 <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
             <div class="el-upload__text">
-                  将 WAV 音频文件拖到此处，或<em>点击选择文件</em>
+                  Kéo tệp âm thanh WAV vào đây hoặc<em>Bấm để chọn tập tin</em>
             </div>
             <template #tip>
               <div class="el-upload__tip">
-                只能上传 WAV 格式的音频文件，建议时长 3-10 秒，文件大小不超过 10MB
+                chỉ có thể tải lên các tệp âm thanh ở định dạng WAV. Thời lượng khuyến nghị là 3-10 giây và kích thước tệp không vượt quá 10MB.
               </div>
             </template>
           </el-upload>
@@ -470,26 +470,26 @@
         </el-tab-pane>
 
         <!-- 录制音频 -->
-        <el-tab-pane label="录制音频" name="record">
+        <el-tab-pane label="Ghi âm" name="record">
           <div class="record-section">
             <div class="record-status">
               <div v-if="!isRecording && !recordedBlob" class="record-ready">
                 <el-icon size="48" color="var(--apple-primary)"><Microphone /></el-icon>
-                <p>点击下方按钮开始录制</p>
-                <p class="record-tip">建议录制 3-10 秒的清晰音频</p>
+                <p>Nhấp vào nút bên dưới để bắt đầu ghi</p>
+                <p class="record-tip">khuyên bạn nên ghi âm thanh rõ ràng trong 3-10 giây</p>
               </div>
               <div v-else-if="isRecording" class="record-recording">
                 <div class="recording-indicator">
                   <span class="recording-dot"></span>
-                  <span class="recording-text">正在录制中...</span>
+                  <span class="recording-text">đang ghi...</span>
                 </div>
                 <div class="record-time">{{ formatRecordTime(recordTime) }}</div>
-                <p class="record-tip">点击停止按钮结束录制</p>
+                <p class="record-tip">Nhấp vào nút dừng để kết thúc ghi</p>
               </div>
               <div v-else-if="recordedBlob" class="record-complete">
                 <el-icon size="48" color="var(--apple-success)"><CircleCheck /></el-icon>
-                <p>录制完成</p>
-                <p class="record-tip">时长: {{ formatRecordTime(recordTime) }}</p>
+                <p>Quá trình ghi  đã hoàn tất</p>
+                <p class="record-tip">Thời lượng : {{ formatRecordTime(recordTime) }}</p>
                 <audio :src="recordedBlobUrl" controls class="record-preview"></audio>
               </div>
             </div>
@@ -503,7 +503,7 @@
                 :disabled="!canRecord"
               >
                 <el-icon><VideoPlay /></el-icon>
-                开始录制
+                bắt đầu ghi
               </el-button>
               <el-button
                 v-if="isRecording"
@@ -512,7 +512,7 @@
                 @click="stopRecording"
               >
                 <el-icon><VideoPause /></el-icon>
-                停止录制
+                Dừng ghi
               </el-button>
               <el-button
                 v-if="recordedBlob"
@@ -522,7 +522,7 @@
                 :disabled="!canRecord"
               >
                 <el-icon><Refresh /></el-icon>
-                重新录制
+                được ghi lại
           </el-button>
         </div>
           </div>
@@ -530,14 +530,14 @@
       </el-tabs>
 
       <template #footer>
-        <el-button @click="handleCloseUploadDialog">取消</el-button>
+        <el-button @click="handleCloseUploadDialog">Hủy</el-button>
         <el-button
           type="primary"
           @click="handleSubmitSample"
           :loading="submitting"
           :disabled="!hasAudioFile"
         >
-          确定
+          Xác nhận
         </el-button>
       </template>
     </el-dialog>
@@ -545,13 +545,13 @@
     <!-- 验证声纹组对话框 -->
     <el-dialog
       v-model="showVerifyDialog"
-      :title="`验证声纹组: ${currentVerifyGroup?.name || ''}`"
+      :title="`Xác minh nhóm nhận dạng loa: ${currentVerifyGroup?.name || ''}`"
       width="600px"
       :before-close="handleCloseVerifyDialog"
     >
       <el-tabs v-model="verifyMode" class="verify-tabs">
         <!-- 上传文件 -->
-        <el-tab-pane label="上传文件" name="upload">
+        <el-tab-pane label="Tệp tải lên" name="upload">
           <el-form
             ref="verifyFormRef"
             :model="verifyForm"
@@ -572,11 +572,11 @@
               >
                 <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
                 <div class="el-upload__text">
-                  将 WAV 音频文件拖到此处，或<em>点击选择文件</em>
+                  Kéo tệp âm thanh WAV vào đây hoặc<em>Bấm để chọn tập tin</em>
                 </div>
                 <template #tip>
                   <div class="el-upload__tip">
-                    只能上传 WAV 格式的音频文件，建议时长 3-10 秒，文件大小不超过 10MB
+                    chỉ có thể tải lên các tệp âm thanh ở định dạng WAV. Thời lượng khuyến nghị là 3-10 giây và kích thước tệp không vượt quá 10MB.
                   </div>
                 </template>
               </el-upload>
@@ -590,26 +590,26 @@
         </el-tab-pane>
 
         <!-- 录制音频 -->
-        <el-tab-pane label="录制音频" name="record">
+        <el-tab-pane label="Ghi âm" name="record">
           <div class="record-section">
             <div class="record-status">
               <div v-if="!isVerifyRecording && !verifyRecordedBlob" class="record-ready">
                 <el-icon size="48" color="var(--apple-primary)"><Microphone /></el-icon>
-                <p>点击下方按钮开始录制</p>
-                <p class="record-tip">建议录制 3-10 秒的清晰音频</p>
+                <p>Nhấp vào nút bên dưới để bắt đầu ghi</p>
+                <p class="record-tip">khuyên bạn nên ghi âm thanh rõ ràng trong 3-10 giây</p>
               </div>
               <div v-else-if="isVerifyRecording" class="record-recording">
                 <div class="recording-indicator">
                   <span class="recording-dot"></span>
-                  <span class="recording-text">正在录制中...</span>
+                  <span class="recording-text">đang ghi...</span>
                 </div>
                 <div class="record-time">{{ formatRecordTime(verifyRecordTime) }}</div>
-                <p class="record-tip">点击停止按钮结束录制</p>
+                <p class="record-tip">Nhấp vào nút dừng để kết thúc ghi</p>
               </div>
               <div v-else-if="verifyRecordedBlob" class="record-complete">
                 <el-icon size="48" color="var(--apple-success)"><CircleCheck /></el-icon>
-                <p>录制完成</p>
-                <p class="record-tip">时长: {{ formatRecordTime(verifyRecordTime) }}</p>
+                <p>Quá trình ghi  đã hoàn tất</p>
+                <p class="record-tip">Thời lượng : {{ formatRecordTime(verifyRecordTime) }}</p>
                 <audio :src="verifyRecordedBlobUrl" controls class="record-preview"></audio>
               </div>
             </div>
@@ -623,7 +623,7 @@
                 :disabled="!canRecord"
               >
                 <el-icon><VideoPlay /></el-icon>
-                开始录制
+                bắt đầu ghi
               </el-button>
               <el-button
                 v-if="isVerifyRecording"
@@ -632,7 +632,7 @@
                 @click="stopVerifyRecording"
               >
                 <el-icon><VideoPause /></el-icon>
-                停止录制
+                Dừng ghi
               </el-button>
               <el-button
                 v-if="verifyRecordedBlob"
@@ -642,7 +642,7 @@
                 :disabled="!canRecord"
               >
                 <el-icon><Refresh /></el-icon>
-                重新录制
+                được ghi lại
               </el-button>
             </div>
           </div>
@@ -651,7 +651,7 @@
 
       <!-- 验证结果展示 -->
       <div v-if="verifyResult" class="verify-result">
-        <el-divider>验证结果</el-divider>
+        <el-divider>Kết quả xác minh</el-divider>
         <div :class="['result-content', verifyResult.verified ? 'result-success' : 'result-failed']">
           <div class="result-icon">
             <el-icon v-if="verifyResult.verified" size="48" color="var(--apple-success)"><CircleCheck /></el-icon>
@@ -659,11 +659,11 @@
           </div>
           <div class="result-info">
             <div class="result-status">
-              {{ verifyResult.verified ? '验证通过' : '验证未通过' }}
+              {{ verifyResult.verified ? 'đã được xác minh' : 'Xác minh  không thành công' }}
             </div>
             <div class="result-details">
-              <div>置信度: <strong>{{ (verifyResult.confidence * 100).toFixed(1) }}%</strong></div>
-              <div>阈值: {{ (verifyResult.threshold * 100).toFixed(1) }}%</div>
+              <div>Mức độ tin cậy của : <strong>{{ (verifyResult.confidence * 100).toFixed(1) }}%</strong></div>
+              <div>Ngưỡng : {{ (verifyResult.threshold * 100).toFixed(1) }}%</div>
             </div>
             <div class="result-message">{{ verifyResult.message }}</div>
           </div>
@@ -671,14 +671,14 @@
       </div>
 
       <template #footer>
-        <el-button @click="handleCloseVerifyDialog">取消</el-button>
+        <el-button @click="handleCloseVerifyDialog">Hủy</el-button>
         <el-button
           type="primary"
           @click="handleSubmitVerify"
           :loading="verifying"
           :disabled="!hasVerifyAudioFile"
         >
-          验证
+          Xác minh
         </el-button>
       </template>
     </el-dialog>
@@ -747,7 +747,7 @@ const verifyRules = {
     {
       validator: (rule, value, callback) => {
         if (!verifyForm.audioFile && !verifyRecordedBlob.value) {
-          callback(new Error('请上传或录制音频文件'))
+          callback(new Error('Vui lòng tải lên hoặc ghi lại các tệp âm thanh'))
         } else {
           callback()
         }
@@ -794,7 +794,7 @@ const groupForm = reactive({
 
 const groupRules = {
   agent_id: [
-    { required: true, message: '请选择关联智能体', trigger: 'change' }
+    { required: true, message: 'Hãy chọn liên kết trợ lý AI', trigger: 'change' }
   ],
   name: [
     { required: true, message: '请输入声纹名称', trigger: 'blur' },
@@ -819,7 +819,7 @@ const uploadRules = {
     { 
       validator: (rule, value, callback) => {
         if (!uploadForm.audioFile && !recordedBlob.value) {
-          callback(new Error('请上传或录制音频文件'))
+          callback(new Error('Vui lòng tải lên hoặc ghi lại các tệp âm thanh'))
         } else {
           callback()
         }
@@ -874,7 +874,7 @@ const loadAgents = async () => {
     agents.value = response.data.data || []
   } catch (error) {
     console.error('加载智能体列表失败:', error)
-    ElMessage.error('加载智能体列表失败')
+    ElMessage.error('Không tải được danh sách trợ lý AI')
   }
 }
 
@@ -885,7 +885,7 @@ const loadTtsConfigs = async () => {
     ttsConfigs.value = response.data.data || []
   } catch (error) {
     console.error('加载TTS配置失败:', error)
-    ElMessage.error('加载TTS配置失败')
+    ElMessage.error('không tải được cấu hình TTS')
   }
 }
 
@@ -963,7 +963,7 @@ const handleTtsConfigChange = async (configId) => {
   } catch (error) {
     console.error('加载音色列表失败:', error)
     currentVoiceOptions.value = []
-    ElMessage.warning('加载音色列表失败，请稍后重试')
+    ElMessage.warning('Không tải được danh sách giọng nói, vui lòng thử lại sau.')
   }
 }
 
@@ -983,13 +983,13 @@ const extractVoiceOptions = (provider, config) => {
       }
       // 添加常用的中文音色
       const edgeVoices = [
-        { label: 'zh-CN-XiaoxiaoNeural (晓晓)', value: 'zh-CN-XiaoxiaoNeural' },
-        { label: 'zh-CN-YunxiNeural (云希)', value: 'zh-CN-YunxiNeural' },
-        { label: 'zh-CN-YunyangNeural (云扬)', value: 'zh-CN-YunyangNeural' },
-        { label: 'zh-CN-XiaoyiNeural (晓伊)', value: 'zh-CN-XiaoyiNeural' },
-        { label: 'zh-CN-YunjianNeural (云健)', value: 'zh-CN-YunjianNeural' },
-        { label: 'zh-CN-XiaochenNeural (晓辰)', value: 'zh-CN-XiaochenNeural' },
-        { label: 'zh-CN-XiaohanNeural (晓涵)', value: 'zh-CN-XiaohanNeural' }
+        { label: 'zh-CN-XiaoxiaoThần kinh (xiaoxiao)', value: 'zh-CN-XiaoxiaoNeural' },
+        { label: 'zh-CN-YunxiNeural (Yunxi)', value: 'zh-CN-YunxiNeural' },
+        { label: 'zh-CN-YunyangThần kinh (Vân Dương)', value: 'zh-CN-YunyangNeural' },
+        { label: 'zh-CN-XiaoyiThần kinh (xiaoyi)', value: 'zh-CN-XiaoyiNeural' },
+        { label: 'zh-CN-YunjianNeural (Yunjian)', value: 'zh-CN-YunjianNeural' },
+        { label: 'zh-CN-XiaochenThần kinh (xiaochen)', value: 'zh-CN-XiaochenNeural' },
+        { label: 'zh-CN-XiaohanThần kinh (Xiaohan)', value: 'zh-CN-XiaohanNeural' }
       ]
       edgeVoices.forEach(v => {
         if (!options.find(o => o.value === v.value)) {
@@ -1005,10 +1005,10 @@ const extractVoiceOptions = (provider, config) => {
         options.push({ label: config.voice, value: config.voice })
       }
       const doubaoVoices = [
-        { label: '双快思思 (甜美女声)', value: 'zh_female_shuangkuaisisi_moon_bigtts' },
-        { label: 'BV700 V2 (男声)', value: 'BV700_V2_streaming' },
-        { label: 'BV001 (女声)', value: 'BV001_streaming' },
-        { label: 'BV002 (男声)', value: 'BV002_streaming' }
+        { label: 'Shuangkuaisisi (giọng nữ ngọt ngào)', value: 'zh_female_shuangkuaisisi_moon_bigtts' },
+        { label: 'BV700 V2 (giọng nam)', value: 'BV700_V2_streaming' },
+        { label: 'BV001 (giọng nữ)', value: 'BV001_streaming' },
+        { label: 'BV002 (giọng nam)', value: 'BV002_streaming' }
       ]
       doubaoVoices.forEach(v => {
         if (!options.find(o => o.value === v.value)) {
@@ -1023,13 +1023,13 @@ const extractVoiceOptions = (provider, config) => {
         options.push({ label: config.spk_id, value: config.spk_id })
       }
       const cosyVoices = [
-        { label: '中文女', value: '中文女' },
-        { label: '中文男', value: '中文男' },
-        { label: '粤语女', value: '粤语女' },
-        { label: '英文女', value: '英文女' },
-        { label: '英文男', value: '英文男' },
-        { label: '日语男', value: '日语男' },
-        { label: '韩语女', value: '韩语女' }
+        { label: 'nữ Trung Quốc', value: '中文女' },
+        { label: 'nam Trung Quốc', value: '中文男' },
+        { label: 'nữ Quảng Đông', value: '粤语女' },
+        { label: 'nữ Anh', value: '英文女' },
+        { label: 'Tiếng Anh nam', value: '英文男' },
+        { label: 'nam Nhật', value: '日语男' },
+        { label: 'nữ Hàn Quốc', value: '韩语女' }
       ]
       cosyVoices.forEach(v => {
         if (!options.find(o => o.value === v.value)) {
@@ -1044,18 +1044,18 @@ const extractVoiceOptions = (provider, config) => {
         options.push({ label: config.voice, value: config.voice })
       }
       const minimaxVoices = [
-        { label: '青涩（男声）', value: 'male-qn-qingse' },
-        { label: '青涩（女声）', value: 'female-qn-qingse' },
-        { label: '少年（男声）', value: 'male-shaonian' },
-        { label: '少年（女声）', value: 'female-shaonian' },
-        { label: '成熟（男声）', value: 'male-chengshu' },
-        { label: '成熟（女声）', value: 'female-chengshu' },
-        { label: '温暖（男声）', value: 'male-wennuan' },
-        { label: '温暖（女声）', value: 'female-wennuan' },
-        { label: '清朗（男声）', value: 'male-qinglang' },
-        { label: '清朗（女声）', value: 'female-qinglang' },
-        { label: '厚重（男声）', value: 'male-houzhong' },
-        { label: '厚重（女声）', value: 'female-houzhong' }
+        { label: 'Qingse (giọng nam)', value: 'male-qn-qingse' },
+        { label: 'Qingse (giọng nữ)', value: 'female-qn-qingse' },
+        { label: 'Cậu bé  (giọng nam)', value: 'male-shaonian' },
+        { label: 'Cậu bé  (giọng nữ)', value: 'female-shaonian' },
+        { label: 'trưởng thành (giọng nam)', value: 'male-chengshu' },
+        { label: 'trưởng thành (giọng nữ)', value: 'female-chengshu' },
+        { label: 'Ấm áp (giọng nam)', value: 'male-wennuan' },
+        { label: 'Ấm áp (giọng nữ)', value: 'female-wennuan' },
+        { label: 'Qinglang (giọng nam)', value: 'male-qinglang' },
+        { label: 'Qinglang (giọng nữ)', value: 'female-qinglang' },
+        { label: 'dày (giọng nam)', value: 'male-houzhong' },
+        { label: 'dày (giọng nữ)', value: 'female-houzhong' }
       ]
       minimaxVoices.forEach(v => {
         if (!options.find(o => o.value === v.value)) {
@@ -1089,7 +1089,7 @@ const getCurrentTtsConfigInfo = () => {
   if (!groupForm.tts_config_id) return ''
   const config = ttsConfigs.value.find(c => c.config_id === groupForm.tts_config_id)
   if (!config) return ''
-  return `TTS提供商: ${config.provider || '未知'}`
+  return `Nhà cung cấp  TTS: ${config.provider || 'Chưa xác định'}`
 }
 
 // 加载声纹组列表
@@ -1104,7 +1104,7 @@ const loadSpeakerGroups = async () => {
     speakerGroups.value = response.data.data || []
   } catch (error) {
     console.error('加载声纹组列表失败:', error)
-    ElMessage.error('加载声纹组列表失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Không tải được danh sách nhóm nhận diện người nói: ' + (error.response?.data?.error || error.message))
   } finally {
     loading.value = false
   }
@@ -1153,12 +1153,12 @@ const handleSubmitGroup = async () => {
 
     if (groupDialogMode.value === 'add') {
       const response = await api.post('/user/speaker-groups', groupForm)
-      ElMessage.success('创建成功')
+      ElMessage.success('được tạo thành công')
       showGroupDialog.value = false
       await loadSpeakerGroups()
     } else {
       const response = await api.put(`/user/speaker-groups/${currentGroup.value.id}`, groupForm)
-      ElMessage.success('更新成功')
+      ElMessage.success('được cập nhật thành công')
       showGroupDialog.value = false
       await loadSpeakerGroups()
     }
@@ -1168,7 +1168,7 @@ const handleSubmitGroup = async () => {
       return
     }
     console.error('提交失败:', error)
-    ElMessage.error('操作失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Hoạt động không thành công: ' + (error.response?.data?.error || error.message))
   } finally {
     submitting.value = false
   }
@@ -1201,7 +1201,7 @@ const handleVerifyGroup = async (group) => {
     console.warn('浏览器不支持录音:', error)
     canRecord.value = false
     if (verifyMode.value === 'record') {
-      ElMessage.warning('您的浏览器不支持录音功能，请使用上传文件方式')
+      ElMessage.warning('Trình duyệt của bạn không hỗ trợ chức năng ghi, vui lòng sử dụng phương thức tải tệp lên')
       verifyMode.value = 'upload'
     }
   }
@@ -1243,7 +1243,7 @@ const handleVerifyFileChange = async (file, fileList) => {
   
   const fileObj = file.raw || file
   if (!fileObj) {
-    ElMessage.warning('文件对象无效')
+    ElMessage.warning('Đối tượng tệp  không hợp lệ')
     verifyUploadRef.value?.clearFiles()
     verifyForm.audioFile = null
     verifyFileList.value = []
@@ -1254,7 +1254,7 @@ const handleVerifyFileChange = async (file, fileList) => {
   const fileName = fileObj.name || file.name || ''
   const fileType = fileObj.type || file.type || ''
   if (!fileType.includes('wav') && !fileName.toLowerCase().endsWith('.wav')) {
-    ElMessage.warning('只能上传 WAV 格式的音频文件')
+    ElMessage.warning('chỉ có thể tải lên các tệp âm thanh ở định dạng WAV')
     verifyUploadRef.value?.clearFiles()
     verifyForm.audioFile = null
     verifyFileList.value = []
@@ -1264,7 +1264,7 @@ const handleVerifyFileChange = async (file, fileList) => {
   // 验证文件大小（10MB）
   const fileSize = fileObj.size || file.size || 0
   if (fileSize > 10 * 1024 * 1024) {
-    ElMessage.warning('文件大小不能超过 10MB')
+    ElMessage.warning('Kích thước tệp  không thể vượt quá 10MB')
     verifyUploadRef.value?.clearFiles()
     verifyForm.audioFile = null
     verifyFileList.value = []
@@ -1362,7 +1362,7 @@ const startVerifyRecording = async () => {
         }
       } catch (error) {
         console.error('处理录音数据失败:', error)
-        ElMessage.error('处理录音数据失败，请重试')
+        ElMessage.error('không xử lý được dữ liệu ghi, vui lòng thử lại')
         verifyRecordedBlob.value = null
         verifyRecordedBlobUrl.value = ''
         verifyForm.audioFile = null
@@ -1381,10 +1381,10 @@ const startVerifyRecording = async () => {
       verifyRecordTime.value += 0.1
     }, 100)
 
-    ElMessage.success('开始录制')
+    ElMessage.success('bắt đầu ghi')
   } catch (error) {
     console.error('录音失败:', error)
-    ElMessage.error('录音失败: ' + error.message)
+    ElMessage.error('Ghi  không thành công: ' + error.message)
     canRecord.value = false
   }
 }
@@ -1401,7 +1401,7 @@ const stopVerifyRecording = () => {
     verifyRecordTimer.value = null
   }
 
-  ElMessage.success('录制完成')
+  ElMessage.success('Quá trình ghi  đã hoàn tất')
 }
 
 // 提交验证
@@ -1412,7 +1412,7 @@ const handleSubmitVerify = async () => {
     await verifyFormRef.value.validate()
 
     if (!verifyForm.audioFile && !verifyRecordedBlob.value) {
-      ElMessage.warning('请上传或录制音频文件')
+      ElMessage.warning('Vui lòng tải lên hoặc ghi lại các tệp âm thanh')
       return
     }
 
@@ -1428,7 +1428,7 @@ const handleSubmitVerify = async () => {
       const fileName = `verify_recording_${Date.now()}.wav`
       file = new File([verifyRecordedBlob.value], fileName, { type: 'audio/wav' })
     } else {
-      ElMessage.warning('请上传或录制音频文件')
+      ElMessage.warning('Vui lòng tải lên hoặc ghi lại các tệp âm thanh')
       return
     }
 
@@ -1446,19 +1446,19 @@ const handleSubmitVerify = async () => {
       }
       
       if (verifyResult.value.verified) {
-        ElMessage.success('验证通过！')
+        ElMessage.success('đã được xác minh!')
       } else {
-        ElMessage.warning('验证未通过')
+        ElMessage.warning('Xác minh  không thành công')
       }
     } else {
-      ElMessage.error('验证失败')
+      ElMessage.error('Xác minh  không thành công')
     }
   } catch (error) {
     if (error.fields) {
       return
     }
     console.error('验证失败:', error)
-    ElMessage.error('验证失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Xác minh  không thành công: ' + (error.response?.data?.error || error.message))
   } finally {
     verifying.value = false
   }
@@ -1498,23 +1498,23 @@ const hasVerifyAudioFile = computed(() => {
 const handleDeleteGroup = async (group) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除声纹组"${group.name}"吗？此操作将删除该组下的所有样本，且不可恢复。`,
-      '确认删除',
+      `Bạn có chắc chắn muốn xóa nhóm nhận diện người nói"${group.name}"? Thao tác này sẽ xóa tất cả các mẫu trong nhóm này và không thể phục hồi được.`,
+      'Xác nhận xóa',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Xác nhận',
+        cancelButtonText: 'Hủy',
         type: 'warning'
       }
     )
 
     loading.value = true
     await api.delete(`/user/speaker-groups/${group.id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Đã xóa')
     await loadSpeakerGroups()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      ElMessage.error('删除失败: ' + (error.response?.data?.error || error.message))
+      ElMessage.error('Xóa  không thành công: ' + (error.response?.data?.error || error.message))
     }
   } finally {
     loading.value = false
@@ -1543,7 +1543,7 @@ const loadSamples = async (groupId) => {
     samples.value = response.data.data || []
   } catch (error) {
     console.error('加载样本列表失败:', error)
-    ElMessage.error('加载样本列表失败')
+    ElMessage.error('Không tải được danh sách mẫu')
   }
 }
 
@@ -1580,7 +1580,7 @@ const handleAddSample = async () => {
     console.warn('浏览器不支持录音:', error)
     canRecord.value = false
     if (uploadMode.value === 'record') {
-      ElMessage.warning('您的浏览器不支持录音功能，请使用上传文件方式')
+      ElMessage.warning('Trình duyệt của bạn không hỗ trợ chức năng ghi, vui lòng sử dụng phương thức tải tệp lên')
       uploadMode.value = 'upload'
     }
   }
@@ -1599,7 +1599,7 @@ const handleCloseUploadDialog = () => {
 const handleFileChange = (file) => {
   const fileObj = file.raw || file
   if (!fileObj) {
-    ElMessage.warning('文件对象无效')
+    ElMessage.warning('Đối tượng tệp  không hợp lệ')
     uploadRef.value?.clearFiles()
     uploadForm.audioFile = null
       return
@@ -1609,7 +1609,7 @@ const handleFileChange = (file) => {
   const fileName = fileObj.name || file.name || ''
   const fileType = fileObj.type || file.type || ''
   if (!fileType.includes('wav') && !fileName.toLowerCase().endsWith('.wav')) {
-    ElMessage.warning('只能上传 WAV 格式的音频文件')
+    ElMessage.warning('chỉ có thể tải lên các tệp âm thanh ở định dạng WAV')
     uploadRef.value?.clearFiles()
     uploadForm.audioFile = null
     return
@@ -1618,7 +1618,7 @@ const handleFileChange = (file) => {
   // 验证文件大小（10MB）
   const fileSize = fileObj.size || file.size || 0
   if (fileSize > 10 * 1024 * 1024) {
-    ElMessage.warning('文件大小不能超过 10MB')
+    ElMessage.warning('Kích thước tệp  không thể vượt quá 10MB')
     uploadRef.value?.clearFiles()
     uploadForm.audioFile = null
     return
@@ -1709,7 +1709,7 @@ const startRecording = async () => {
         }
       } catch (error) {
         console.error('处理录音数据失败:', error)
-        ElMessage.error('处理录音数据失败，请重试')
+        ElMessage.error('không xử lý được dữ liệu ghi, vui lòng thử lại')
         recordedBlob.value = null
         recordedBlobUrl.value = ''
         uploadForm.audioFile = null
@@ -1728,10 +1728,10 @@ const startRecording = async () => {
       recordTime.value += 0.1
     }, 100)
 
-    ElMessage.success('开始录制')
+    ElMessage.success('bắt đầu ghi')
   } catch (error) {
     console.error('录音失败:', error)
-    ElMessage.error('录音失败: ' + error.message)
+    ElMessage.error('Ghi  không thành công: ' + error.message)
     canRecord.value = false
   }
 }
@@ -1748,7 +1748,7 @@ const stopRecording = () => {
     recordTimer.value = null
   }
 
-  ElMessage.success('录制完成')
+  ElMessage.success('Quá trình ghi  đã hoàn tất')
 }
 
 // 将音频转换为 WAV 格式
@@ -1854,7 +1854,7 @@ const loadHistoryMessages = async () => {
     historyMessages.value = (response.data.data || []).filter(msg => msg.audio_path)
   } catch (error) {
     console.error('加载历史聊天记录失败:', error)
-    ElMessage.error('加载历史聊天记录失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Không tải được bản ghi trò chuyện lịch sử: ' + (error.response?.data?.error || error.message))
     historyMessages.value = []
   } finally {
     loadingHistory.value = false
@@ -1879,7 +1879,7 @@ const handlePreviewHistoryAudio = async (message) => {
     audioPlayer.value.src = blobUrl
     audioPlayer.value.play().catch(err => {
       console.error('播放失败:', err)
-      ElMessage.warning('播放失败，请检查音频文件')
+      ElMessage.warning('Phát lại  không thành công, vui lòng kiểm tra tệp âm thanh')
     })
     
     audioPlayer.value.onended = () => {
@@ -1887,7 +1887,7 @@ const handlePreviewHistoryAudio = async (message) => {
     }
   } catch (error) {
     console.error('试听失败:', error)
-    ElMessage.error('试听失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Buổi thử giọng  không thành công: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -1896,7 +1896,7 @@ const handleSubmitSample = async () => {
   if (uploadMode.value === 'history') {
     // 从历史记录中选择
     if (!historyForm.selected_message_id) {
-      ElMessage.warning('请选择一条历史聊天记录')
+      ElMessage.warning('Vui lòng chọn bản ghi trò chuyện lịch sử')
       return
     }
 
@@ -1906,13 +1906,13 @@ const handleSubmitSample = async () => {
       formData.append('message_id', historyForm.selected_message_id)
 
       await api.post(`/user/speaker-groups/${currentGroup.value.id}/samples`, formData)
-      ElMessage.success('添加成功')
+      ElMessage.success('đã thêm thành công')
       handleCloseUploadDialog()
       await loadSamples(currentGroup.value.id)
       await loadSpeakerGroups() // 刷新列表以更新样本数量
     } catch (error) {
       console.error('添加失败:', error)
-      ElMessage.error('添加失败: ' + (error.response?.data?.error || error.message))
+      ElMessage.error('không thêm được: ' + (error.response?.data?.error || error.message))
     } finally {
       submitting.value = false
     }
@@ -1926,7 +1926,7 @@ const handleSubmitSample = async () => {
     await uploadFormRef.value.validate()
 
     if (!uploadForm.audioFile && !recordedBlob.value) {
-      ElMessage.warning('请上传或录制音频文件')
+      ElMessage.warning('Vui lòng tải lên hoặc ghi lại các tệp âm thanh')
       return
     }
 
@@ -1941,7 +1941,7 @@ const handleSubmitSample = async () => {
       const fileName = `recording_${Date.now()}.wav`
       file = new File([recordedBlob.value], fileName, { type: 'audio/wav' })
     } else {
-      ElMessage.warning('请上传或录制音频文件')
+      ElMessage.warning('Vui lòng tải lên hoặc ghi lại các tệp âm thanh')
       return
     }
 
@@ -1949,7 +1949,7 @@ const handleSubmitSample = async () => {
     formData.append('audio', file)
 
     await api.post(`/user/speaker-groups/${currentGroup.value.id}/samples`, formData)
-    ElMessage.success('上传成功')
+    ElMessage.success('đã được tải lên thành công')
     handleCloseUploadDialog()
     await loadSamples(currentGroup.value.id)
     await loadSpeakerGroups() // 刷新列表以更新样本数量
@@ -1958,7 +1958,7 @@ const handleSubmitSample = async () => {
       return
     }
     console.error('上传失败:', error)
-    ElMessage.error('上传失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Tải lên  không thành công: ' + (error.response?.data?.error || error.message))
   } finally {
     submitting.value = false
   }
@@ -1983,7 +1983,7 @@ const handlePlaySample = async (sample) => {
     audioPlayer.value.src = blobUrl
     audioPlayer.value.play().catch(err => {
       console.error('播放失败:', err)
-      ElMessage.warning('播放失败，请检查音频文件')
+      ElMessage.warning('Phát lại  không thành công, vui lòng kiểm tra tệp âm thanh')
     })
     
     // 播放结束后清理 blob URL
@@ -1992,7 +1992,7 @@ const handlePlaySample = async (sample) => {
     }
   } catch (error) {
     console.error('播放失败:', error)
-    ElMessage.error('播放失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Phát lại  không thành công: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -2023,7 +2023,7 @@ const handleDownloadSample = async (sample) => {
     }, 100)
   } catch (error) {
     console.error('下载失败:', error)
-    ElMessage.error('下载失败: ' + (error.response?.data?.error || error.message))
+    ElMessage.error('Tải xuống  không thành công: ' + (error.response?.data?.error || error.message))
   }
 }
 
@@ -2031,23 +2031,23 @@ const handleDownloadSample = async (sample) => {
 const handleDeleteSample = async (sample) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除样本"${sample.file_name}"吗？此操作不可恢复。`,
-      '确认删除',
+      `Bạn có chắc chắn muốn xóa mẫu"${sample.file_name}"? Hoạt động này là không thể đảo ngược.`,
+      'Xác nhận xóa',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Xác nhận',
+        cancelButtonText: 'Hủy',
         type: 'warning'
       }
     )
 
     await api.delete(`/user/speaker-groups/${currentGroup.value.id}/samples/${sample.id}`)
-    ElMessage.success('删除成功')
+    ElMessage.success('Đã xóa')
     await loadSamples(currentGroup.value.id)
     await loadSpeakerGroups() // 刷新列表以更新样本数量
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      ElMessage.error('删除失败: ' + (error.response?.data?.error || error.message))
+      ElMessage.error('Xóa  không thành công: ' + (error.response?.data?.error || error.message))
     }
   }
 }
@@ -2056,10 +2056,10 @@ const handleDeleteSample = async (sample) => {
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制到剪贴板')
+    ElMessage.success('được sao chép vào khay nhớ tạm')
   } catch (error) {
     console.error('复制失败:', error)
-    ElMessage.error('复制失败')
+    ElMessage.error('Không thể sao chép')
   }
 }
 
@@ -2111,7 +2111,7 @@ const resetUploadForm = () => {
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return '-'
-  return new Date(dateString).toLocaleString('zh-CN')
+  return new Date(dateString).toLocaleString('vi-VN')
 }
 
 // 截断ID显示

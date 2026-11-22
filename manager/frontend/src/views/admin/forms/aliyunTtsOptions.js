@@ -1,11 +1,11 @@
 export const ALIYUN_TTS_MODEL_OPTIONS = [
-  { label: 'qwen3-tts-flash (Qwen3 TTS 闪电版)', value: 'qwen3-tts-flash' },
-  { label: 'qwen3-tts-instruct-flash (Qwen3 TTS 指令控音版)', value: 'qwen3-tts-instruct-flash' },
-  { label: 'cosyvoice-v3-flash (CosyVoice v3 闪电版)', value: 'cosyvoice-v3-flash' },
-  { label: 'cosyvoice-v2 (CosyVoice v2 高质量版)', value: 'cosyvoice-v2' },
-  { label: 'cosyvoice-v1 (CosyVoice v1 标准版)', value: 'cosyvoice-v1' },
-  { label: 'qwen-audio-3.0-tts-flash (Qwen Audio 3.0 闪电版)', value: 'qwen-audio-3.0-tts-flash' },
-  { label: 'qwen-audio-3.0-tts-plus (Qwen Audio 3.0 专业版)', value: 'qwen-audio-3.0-tts-plus' }
+  { label: 'qwen3-tts-flash (Phiên bản Qwen3 TTS Lightning)', value: 'qwen3-tts-flash' },
+  { label: 'qwen3-tts-instruct-flash (Phiên bản điều khiển lệnh Qwen3 TTS)', value: 'qwen3-tts-instruct-flash' },
+  { label: 'cosyvoice-v3-flash (phiên bản CosyVoice v3 Lightning)', value: 'cosyvoice-v3-flash' },
+  { label: 'cosyvoice-v2 (CosyVoice v2 phiên bản chất lượng cao)', value: 'cosyvoice-v2' },
+  { label: 'cosyvoice-v1 (Phiên bản tiêu chuẩn CosyVoice v1)', value: 'cosyvoice-v1' },
+  { label: 'qwen-audio-3.0-tts-flash (Phiên bản Lightning Qwen Audio 3.0)', value: 'qwen-audio-3.0-tts-flash' },
+  { label: 'qwen-audio-3.0-tts-plus (Phiên bản chuyên nghiệp Qwen Audio 3.0)', value: 'qwen-audio-3.0-tts-plus' }
 ]
 
 export const ALIYUN_TTS_API_URL_BEIJING = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'

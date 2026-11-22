@@ -1,6 +1,9 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import viElement from './locales/components'
+import { Locale } from 'vant'
+import viVant from 'vant/es/locale/lang/vi-VN'
 import 'element-plus/dist/index.css'
 // Vant 4 按需引入，减少打包体积
 import { 
@@ -24,6 +27,7 @@ import router from './router'
 import './styles/apple-light.css'
 
 const app = createApp(App)
+Locale.use('vi-VN', viVant)
 
 // 注册所有Element Plus图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
@@ -46,6 +50,6 @@ app.use(Icon)
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)  // 桌面端使用
+app.use(ElementPlus, { locale: viElement })
 
 app.mount('#app')

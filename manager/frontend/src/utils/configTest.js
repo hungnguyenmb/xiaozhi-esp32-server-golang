@@ -27,7 +27,7 @@ export async function testSingleConfig(type, configId) {
   const data = res.data?.data ?? res.data
   const typeResult = data?.[type]
   if (!typeResult || typeof typeResult !== 'object') {
-    return { ok: false, message: '未返回测试结果' }
+    return { ok: false, message: 'Không có kết quả kiểm tra nào được trả về' }
   }
   const entries = Object.entries(typeResult).filter(([k]) => !k.startsWith('_'))
   if (configId && typeResult[configId]) {
@@ -36,7 +36,7 @@ export async function testSingleConfig(type, configId) {
   if (entries.length === 0) {
     const err = typeResult._error || typeResult._no_client || typeResult._none
     const msg = err && typeof err === 'object' ? (err.message || '').trim() : ''
-    const fallback = typeResult._none ? '未配置或未启用' : '无测试结果'
+    const fallback = typeResult._none ? 'Chưa được định cấu hình hoặc chưa được bật' : 'Không có kết quả kiểm tra'
     return { ok: false, message: msg || fallback }
   }
   return normItem(entries[0][1])
@@ -57,7 +57,7 @@ export async function testAllConfigs(type) {
     return out
   }
   const err = typeResult._error || typeResult._no_client || typeResult._none
-  const errMsg = err && typeof err === 'object' ? (err.message || '').trim() : '未返回测试结果'
+  const errMsg = err && typeof err === 'object' ? (err.message || '').trim() : 'Không có kết quả kiểm tra nào được trả về'
   for (const [k, v] of Object.entries(typeResult)) {
     if (k.startsWith('_')) continue
     out[k] = normItem(v)
@@ -96,7 +96,7 @@ export async function testWithData(type, typeData) {
   const data = res.data?.data ?? res.data
   const typeResult = data?.[type]
   if (!typeResult || typeof typeResult !== 'object') {
-    return { ok: false, message: '未返回测试结果' }
+    return { ok: false, message: 'Không có kết quả kiểm tra nào được trả về' }
   }
   const err = typeResult._error || typeResult._no_client
   if (err && typeof err === 'object' && err.message) {
@@ -104,7 +104,7 @@ export async function testWithData(type, typeData) {
   }
   const entries = Object.entries(typeResult).filter(([k]) => !k.startsWith('_'))
   if (entries.length === 0) {
-    return { ok: false, message: typeResult._none?.message || '无测试结果' }
+    return { ok: false, message: typeResult._none?.message || 'Không có kết quả kiểm tra' }
   }
   return normItem(entries[0][1])
 }

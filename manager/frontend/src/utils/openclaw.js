@@ -29,19 +29,19 @@ export function buildOpenClawCommands(endpoint) {
 
     const steps = [
       {
-        title: '启用渠道',
+        title: 'Kênh kích hoạt',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.enabled true --strict-json`
       },
       {
-        title: '配置地址',
+        title: 'Địa chỉ cấu hình',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.url "${url}"`
       },
       {
-        title: '配置令牌',
+        title: 'Mã thông báo cấu hình',
         command: `openclaw config set ${OPENCLAW_CHANNEL_CONFIG_PREFIX}.token "${token}"`
       },
       {
-        title: '重启网关',
+        title: 'Khởi động lại cổng',
         command: 'openclaw gateway restart'
       }
     ]

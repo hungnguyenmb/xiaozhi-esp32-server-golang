@@ -10,7 +10,7 @@
       <VideoPause v-if="isPlaying" />
       <VideoPlay v-else />
     </el-icon>
-    <span>{{ isPlaying ? '暂停' : '试听' }}</span>
+    <span>{{ isPlaying ? 'Tạm dừng' : 'Nghe thử' }}</span>
   </el-button>
 </template>
 
@@ -19,6 +19,7 @@ import { computed, ref, onBeforeUnmount, watch } from 'vue'
 import { VideoPlay, VideoPause } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api'
+import { translateServerMessage } from '@/locales/server'
 import { extractPreviewError, previewPlaybackIdentity } from './voicePreview'
 
 const props = defineProps({
@@ -74,7 +75,7 @@ const handleTogglePlay = async () => {
   }
 
   if (!props.voice) {
-    ElMessage.warning('请先选择或输入音色')
+    ElMessage.warning('Vui lòng chọn hoặc nhập giọng đọc trước')
     return
   }
 
@@ -91,7 +92,7 @@ const handleTogglePlay = async () => {
       voice: props.voice,
       instruction: props.instruction,
       language_type: props.languageType,
-      text: props.text || '你好，我是小智，这是为您演示的音色与试听效果。'
+      text: props.text || 'Xin chào, mình là Xiaozhi. Đây là giọng đọc bạn đang nghe thử.'
     }
     if (props.isAdmin) {
       payload.api_key = props.apiKey
@@ -121,7 +122,7 @@ const handleTogglePlay = async () => {
       stopAudio()
     }
     audioObj.onerror = () => {
-      ElMessage.error('播放试听音频失败')
+      ElMessage.error('Không thể phát âm thanh nghe thử')
       isPlaying.value = false
       stopAudio()
     }
@@ -136,7 +137,7 @@ const handleTogglePlay = async () => {
     if (currentRequestVersion !== requestVersion) return
     stopAudio()
     const msg = await extractPreviewError(err)
-    ElMessage.error(msg)
+    ElMessage.error(translateServerMessage(msg))
   } finally {
     if (currentRequestVersion === requestVersion) {
       requestController = null

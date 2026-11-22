@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       return { 
         success: false, 
-        message: error.response?.data?.error || '登录失败' 
+        message: error.response?.data?.error || 'Đăng nhập không thành công'
       }
     }
   }
@@ -37,7 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       return { 
         success: false, 
-        message: error.response?.data?.error || '注册失败' 
+        message: error.response?.data?.error || 'Đăng ký không thành công'
       }
     }
   }

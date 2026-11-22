@@ -1,59 +1,59 @@
 <template>
   <div class="config-page">
     <div class="page-actions">
-      <el-button @click="loadSettings" :loading="loading">刷新</el-button>
-      <el-button type="primary" @click="saveSettings" :loading="saving">保存设置</el-button>
+      <el-button @click="loadSettings" :loading="loading">Tải lại</el-button>
+      <el-button type="primary" @click="saveSettings" :loading="saving">Lưu cài đặt</el-button>
     </div>
 
     <el-card v-loading="loading">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="180px" style="max-width: 720px;">
-        <el-divider content-position="left">身份验证</el-divider>
-        <el-form-item label="启用设备激活验证" prop="auth.enable">
+        <el-divider content-position="left">Xác thực</el-divider>
+        <el-form-item label="Kích hoạt xác minh kích hoạt thiết bị" prop="auth.enable">
           <el-switch v-model="form.auth.enable" />
         </el-form-item>
-        <el-form-item label="登录数字验证" prop="auth.login_captcha_enabled">
+        <el-form-item label="Đăng nhập xác minh kỹ thuật số" prop="auth.login_captcha_enabled">
           <el-switch
             v-model="form.auth.login_captcha_enabled"
-            active-text="开启"
-            inactive-text="关闭"
+            active-text="bật"
+            inactive-text="Đóng"
           />
           <div class="form-help">
-            开启后登录页需要完成数字算术题；关闭后登录只校验用户名和密码。默认开启。
+            Sau khi bật trang đăng nhập, bạn cần hoàn thành các câu hỏi số học; sau khi tắt, trang đăng nhập chỉ xác minh tên người dùng và mật khẩu. Được bật theo mặc định.
           </div>
         </el-form-item>
 
-        <el-divider content-position="left">聊天参数</el-divider>
-        <el-form-item label="会话最大空闲时间(ms)" prop="chat.max_idle_duration">
+        <el-divider content-position="left">Thông số trò chuyện</el-divider>
+        <el-form-item label="Thời gian nhàn rỗi tối đa của phiên  (ms)" prop="chat.max_idle_duration">
           <el-input-number v-model="form.chat.max_idle_duration" :min="0" :step="1000" style="width: 100%;" />
           <div class="form-help">
-            单位毫秒。设置为 0 表示不限制会话空闲时长（不会因空闲自动断开）。建议值：30000~120000。
+            đơn vị mili giây. Đặt nó thành 0 nghĩa là không có giới hạn về thời gian nhàn rỗi của phiên (nó sẽ không tự động bị ngắt kết nối do thời gian nhàn rỗi). Giá trị đề xuất: 30000 ~ 120000.
           </div>
         </el-form-item>
-        <el-form-item label="句子结束静音阈值(ms)" prop="chat.chat_max_silence_duration">
+        <el-form-item label="Ngưỡng im lặng cuối câu (ms)" prop="chat.chat_max_silence_duration">
           <el-input-number v-model="form.chat.chat_max_silence_duration" :min="0" :step="10" style="width: 100%;" />
           <div class="form-help">
-            用于判定一句话结束：从“有声”转为“静音”持续达到该阈值后，认为句子结束并触发后续处理。默认 400ms。阈值越小响应越快但更易截断，阈值越大更稳但响应更慢，建议 300~600ms。
+            được sử dụng để xác định phần cuối của câu: sau khi quá trình chuyển từ "âm thanh" sang "im lặng" tiếp tục đạt đến ngưỡng này, câu được coi là kết thúc và quá trình xử lý tiếp theo được kích hoạt. Mặc định 400ms. Ngưỡng càng nhỏ thì phản hồi càng nhanh nhưng càng dễ bị cắt. Ngưỡng càng lớn thì phản hồi càng ổn định nhưng càng chậm. Khuyến nghị 300 ~ 600ms.
           </div>
         </el-form-item>
-        <el-form-item label="实时打断模式" prop="chat.realtime_mode">
+        <el-form-item label="Chế độ ngắt thời gian thực" prop="chat.realtime_mode">
           <el-select v-model="form.chat.realtime_mode" style="width: 100%;">
-            <el-option :value="1" label="1 - vad打断模式" />
-            <el-option :value="2" label="2 - asr打断模式" />
-            <el-option :value="3" label="3 - asr识别到声纹时打断" />
-            <el-option :value="4" label="4 - asr出结果打断" />
+            <el-option :value="1" label="1 - chế độ ngắt vad" />
+            <el-option :value="2" label="2 - chế độ ngắt asr" />
+            <el-option :value="3" label="3 - asr bị gián đoạn khi nhận diện người nói" />
+            <el-option :value="4" label="4 - kết quả asr bị gián đoạn" />
           </el-select>
         </el-form-item>
-        <el-form-item label="全局System Prompt描述" prop="chat.global_system_prompt">
+        <el-form-item label="Mô tả lời nhắc hệ thống dùng chung" prop="chat.global_system_prompt">
           <el-input
             v-model="form.chat.global_system_prompt"
             type="textarea"
             :rows="6"
             maxlength="8000"
             show-word-limit
-            placeholder="该内容会在系统提示词最前面拼接，建议填写平台级约束与身份设定。"
+            placeholder="Nội dung này sẽ được ghép ở phía trước dấu nhắc hệ thống. Bạn nên điền vào các ràng buộc ở cấp độ nền tảng và cài đặt nhận dạng."
           />
           <div class="form-help">
-            生效顺序：全局System Prompt描述 → 角色/设备提示词 → 时间/记忆等运行时信息。
+            Thứ tự hiệu quả: Mô tả lời nhắc hệ thống dùng chung → Lời nhắc vai trò/thiết bị → thông tin thời gian chạy như thời gian/bộ nhớ.
           </div>
         </el-form-item>
       </el-form>
@@ -85,16 +85,16 @@ const form = reactive({
 
 const rules = {
   'chat.max_idle_duration': [
-    { required: true, message: '请输入会话最大空闲时间', trigger: 'blur' }
+    { required: true, message: 'Vui lòng nhập thời gian rảnh tối đa của phiên', trigger: 'blur' }
   ],
   'chat.chat_max_silence_duration': [
-    { required: true, message: '请输入句子结束静音阈值', trigger: 'blur' }
+    { required: true, message: 'Vui lòng nhập ngưỡng im lặng cuối câu', trigger: 'blur' }
   ],
   'chat.realtime_mode': [
-    { required: true, message: '请选择实时打断模式', trigger: 'change' }
+    { required: true, message: 'Vui lòng chọn chế độ ngắt thời gian thực', trigger: 'change' }
   ],
   'chat.global_system_prompt': [
-    { max: 8000, message: '全局System Prompt描述不能超过8000个字符', trigger: 'blur' }
+    { max: 8000, message: 'Mô tả lời nhắc hệ thống dùng chung không thể vượt quá 8000 ký tự.', trigger: 'blur' }
   ]
 }
 
@@ -110,7 +110,7 @@ const loadSettings = async () => {
     form.chat.realtime_mode = Number(data.chat?.realtime_mode ?? 4)
     form.chat.global_system_prompt = String(data.chat?.global_system_prompt ?? '')
   } catch (error) {
-    ElMessage.error('加载聊天设置失败')
+    ElMessage.error('Không tải được cài đặt trò chuyện')
     console.error(error)
   } finally {
     loading.value = false
@@ -136,9 +136,9 @@ const saveSettings = async () => {
         global_system_prompt: String(form.chat.global_system_prompt || '')
       }
     })
-    ElMessage.success('聊天设置保存成功')
+    ElMessage.success('Cài đặt trò chuyện  đã được lưu thành công')
   } catch (error) {
-    ElMessage.error('聊天设置保存失败')
+    ElMessage.error('Không lưu được cài đặt trò chuyện')
     console.error(error)
   } finally {
     saving.value = false

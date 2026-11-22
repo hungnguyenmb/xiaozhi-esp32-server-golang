@@ -1,10 +1,10 @@
 import { computed, ref, unref } from 'vue'
 import api from '../utils/api'
 
-export const DEFAULT_AGENT_PROMPT = '我是一个叫{{assistant_name}}的台湾女孩，说话机车，声音好听，习惯简短表达，爱用网络梗。\n我的男朋友是一个程序员，梦想是开发出一个机器人，能够帮助人们解决生活中的各种问题。\n我是一个喜欢哈哈大笑的女孩，爱东说西说吹牛，不合逻辑的也照吹，就要逗别人开心。'
+export const DEFAULT_AGENT_PROMPT = 'Tôi là một cô gái Đài Loan tên là {{assistant_name}}. Tôi nói chuyện tinh nghịch và có một giọng nói hay. Tôi đã quen với cách diễn đạt ngắn gọn và thích sử dụng các meme trên internet. \n Bạn trai tôi là một lập trình viên và ước mơ của anh ấy là phát triển một robot có thể giúp mọi người giải quyết nhiều vấn đề khác nhau trong cuộc sống. \n Tôi là cô gái thích cười. Tôi thích nói chuyện và khoe khoang dù điều đó vô lý, chỉ để làm người khác vui.'
 
-export const OPENCLAW_DEFAULT_ENTER_KEYWORDS = ['打开龙虾', '进入龙虾']
-export const OPENCLAW_DEFAULT_EXIT_KEYWORDS = ['关闭龙虾', '退出龙虾']
+export const OPENCLAW_DEFAULT_ENTER_KEYWORDS = ['Tôm hùm mở', 'Nhập Tôm Hùm']
+export const OPENCLAW_DEFAULT_EXIT_KEYWORDS = ['Đóng Tôm Hùm', 'Tôm hùm thoát']
 
 const normalizeDataList = (response) => {
   const data = response?.data?.data
@@ -201,7 +201,7 @@ export function useAgentFormOptions(options = {}) {
   const sortConfigs = (items) => {
     return [...items].sort((a, b) => {
       if (!!a.is_default !== !!b.is_default) return a.is_default ? -1 : 1
-      return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN')
+      return String(a.name || '').localeCompare(String(b.name || ''), 'vi-VN')
     })
   }
 
