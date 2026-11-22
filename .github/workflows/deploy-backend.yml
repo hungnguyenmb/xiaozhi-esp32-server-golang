@@ -1,0 +1,107 @@
+name: Deploy Backend & Core Services
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'manager/backend/**'
+      - 'pkg/**'
+      - 'logger/**'
+      - 'constants/**'
+      - 'config/**'
+      - 'deployment/vps/compose.yaml'
+      - 'deployment/vps/Dockerfile'
+      - 'deployment/vps/otazeroone.nginx.conf'
+      - 'deployment/vps/adminzeroone.nginx.conf'
+      - 'docker/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify asr_server submodule
+        run: |
+          if [ ! -f asr_server/server/setup.go ]; then
+            echo "::error::asr_server submodule not checked out properly"
+            exit 1
+          fi
+
+      - name: Build Linux Binary via Docker
+        run: |
+          docker build --target builder -f docker/Dockerfile.linux -t xiaozhi-build-linux .
+          docker create --name xiaozhi_linux xiaozhi-build-linux
+          mkdir -p dist_backend
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/xiaozhi_server dist_backend/xiaozhi_server
+          docker rm xiaozhi_linux
+          chmod +x dist_backend/xiaozhi_server
+
+      - name: Copy binary to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "dist_backend/xiaozhi_server"
+          target: "/tmp"
+          strip_components: 1
+
+      - name: Deploy and Reload Backend on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/docker/antigravity/xiaozhi-go
+            # Backup current working binary
+            if [ -f bundle/xiaozhi_server ]; then
+              cp bundle/xiaozhi_server bundle/xiaozhi_server.bak
+            fi
+            
+            # Place new binary
+            mv /tmp/xiaozhi_server bundle/xiaozhi_server
+            chmod 755 bundle/xiaozhi_server
+            
+            # Rebuild backend container image and restart backend service only
+            docker compose build backend
+            docker compose up -d --no-deps backend
+            
+            # Health check with automatic rollback
+            echo "Waiting for backend health status..."
+            HEALTHY=0
+            for i in $(seq 1 12); do
+              if curl -fsS http://127.0.0.1:8080/api/setup/status >/dev/null 2>&1; then
+                HEALTHY=1
+                echo "Backend is healthy and serving requests!"
+                break
+              fi
+              echo "Checking backend health... attempt $i/12"
+              sleep 3
+            done
+
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "Backend health check failed! Rolling back to previous binary..."
+              if [ -f bundle/xiaozhi_server.bak ]; then
+                cp bundle/xiaozhi_server.bak bundle/xiaozhi_server
+                docker compose build backend
+                docker compose up -d --no-deps backend
+              fi
+              exit 1
+            fi
+
+            # Clean up backup on success
+            rm -f bundle/xiaozhi_server.bak
