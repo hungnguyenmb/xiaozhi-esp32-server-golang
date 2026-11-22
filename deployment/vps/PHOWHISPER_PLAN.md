@@ -136,3 +136,10 @@ Bước tiếp theo: hoàn tất dữ liệu benchmark P1 và chạy kiểm tra 
 2. Chuẩn bị bộ mẫu riêng trên VPS bằng quy trình dữ liệu được cho phép. Schema/lệnh và bốn chế độ Actions nằm ở DEPLOYMENT_GUIDE.md mục 6.
 3. Khi có phạm vi phát hành, merge production, chạy trial rồi benchmark. Chỉ activate sau khi chất lượng, độ trễ, TTS và kế hoạch reconnect robot được kiểm chứng.
 4. Cập nhật mốc còn thiếu bằng run URL/SHA/digest và số đo thực; không đánh dấu P5–P7 hoàn tất chỉ vì unit tests đã qua.
+
+## 9. Commit/merge và CI Linux — 2026-11-23
+
+- Người dùng đã yêu cầu commit và merge production. Commit triển khai 025bd16, sửa Docker context e3a026b; PR #1 đã merge tại 26078b2.
+- CI Linux run 45084318304 thành công: 28 tests, Compose, build/chuyển model INT8, warm-up và WebSocket speech/silence với model thật. Đây là GitHub runner, chưa phải benchmark VPS AMD.
+- CI phát hiện Docker context bị .dockerignore cũ loại file; đã thêm Dockerfile.phowhisper.dockerignore allowlist.
+- Sửa thêm phạm vi concurrency sau khi thấy CI production bị hủy do tranh chỗ pending: khóa dùng chung chỉ áp dụng job deploy ASR, CI theo ref/event. Không dispatch trial/activate trong task commit/merge này.

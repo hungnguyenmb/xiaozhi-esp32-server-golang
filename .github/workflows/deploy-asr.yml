@@ -25,9 +25,9 @@ on:
 permissions:
   contents: read
 
-# Shared with backend: never mutate the same Compose project concurrently.
+# CI must not evict a queued production deployment from the shared lock.
 concurrency:
-  group: xiaozhi-production-services
+  group: phowhisper-ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -119,6 +119,10 @@ jobs:
 
   deploy:
     needs: [test, build]
+    # Only VPS mutations share the lock with the backend workflow.
+    concurrency:
+      group: xiaozhi-production-services
+      cancel-in-progress: false
     if: >-
       always() && needs.test.result == 'success' &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
