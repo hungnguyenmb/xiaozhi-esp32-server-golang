@@ -3,7 +3,7 @@ name: Deploy Frontend (Admin Console)
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - 'manager/frontend/**'
       - 'deployment/vps/deploy_console_vi.py'

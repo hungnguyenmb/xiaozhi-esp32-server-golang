@@ -3,7 +3,7 @@ name: Deploy Backend & Core Services
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - 'cmd/**'
       - 'internal/**'
