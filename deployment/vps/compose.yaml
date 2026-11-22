@@ -1,0 +1,97 @@
+name: xiaozhi-go
+services:
+  tts:
+    build:
+      context: ./vieneu-source
+      dockerfile: docker/Dockerfile.cpu
+    image: xiaozhi-vieneu-cpu:6566468-api
+    restart: unless-stopped
+    command: ["python", "-m", "apps.openai_speech"]
+    env_file: ./runtime/vieneu.env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      VIENEU_BACKEND: onnx
+      VIENEU_DEVICE: cpu
+      VIENEU_PRECISION: fp32
+      VIENEU_MODE: v3nano
+      VIENEU_THREADS: "2"
+      VIENEU_MAX_STREAMS: "1"
+      VIENEU_QUEUE: "4"
+      VIENEU_QUEUE_TIMEOUT: "10"
+      VIENEU_WATERMARK: "0"
+      OMP_NUM_THREADS: "3"
+      OPENBLAS_NUM_THREADS: "1"
+    volumes:
+      - ./runtime/vieneu-cache:/home/app/.cache/huggingface
+    mem_limit: 4g
+    cpus: 4
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      start_period: 300s
+      retries: 5
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  backend:
+    build: .
+    image: xiaozhi-go-local:0.6.5
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      GOMAXPROCS: "4"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./runtime/config:/app/config:ro
+      - ./runtime/data:/app/data
+      - ./runtime/logs:/app/logs
+      - ./runtime/storage:/app/storage
+    depends_on:
+      asr:
+        condition: service_healthy
+    mem_limit: 3g
+    cpus: 3
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/setup/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  asr:
+    build:
+      context: .
+      dockerfile: Dockerfile.asr
+    image: xiaozhi-gipformer-local:1.5
+    restart: unless-stopped
+    volumes:
+      - ./runtime/models/gipformer:/models:ro
+    mem_limit: 4g
+    cpus: 3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10096/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  gateway:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./runtime/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

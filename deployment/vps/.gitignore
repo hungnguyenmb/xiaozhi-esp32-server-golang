@@ -1,0 +1,6 @@
+bundle/
+runtime/
+vieneu-source/
+.env
+*.zip
+__pycache__/

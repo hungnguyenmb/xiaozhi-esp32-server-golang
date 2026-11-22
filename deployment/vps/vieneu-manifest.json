@@ -1,0 +1,14 @@
+{
+  "source": "https://github.com/pnnbao97/VieNeu-TTS",
+  "commit": "6566468cf14974807050495036ab75cd041143f7",
+  "models_cached": {
+    "models--pnnbao-ump--VieNeu-TTS-v3-Nano": "aba295eb96a6fa6003ebe417cc1f2802a7adc1dc",
+    "models--pnnbao-ump--VieNeu-TTS-v3-Turbo": "61b85e3d937fbbacb387714180e8182823512523",
+    "models--OpenMOSS-Team--MOSS-Audio-Tokenizer-Nano-ONNX": "ceff0d0749bfb3fa2d61149794ec6feef0d1e1ae"
+  },
+  "image": "sha256:e598e3adbfe3c65df91533963a1ce522c6e6e16de5f846d37596865761677803",
+  "mode": "v3nano",
+  "voice": "Mai Anh",
+  "sample_rate": 24000,
+  "threads": 2
+}

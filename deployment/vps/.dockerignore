@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!Dockerfile.asr
+!asr_bridge.py
+!bundle/
+!bundle/**
