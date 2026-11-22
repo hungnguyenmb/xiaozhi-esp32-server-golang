@@ -1,0 +1,30 @@
+# Overlay: docker compose -f compose.yaml -f compose.phowhisper.yaml ...
+# Các biến được workflow ghi vào file env riêng; không đổi compose/config gốc.
+services:
+  asr-phowhisper:
+    image: ${PHOWHISPER_IMAGE:?Set immutable PhoWhisper image}
+    restart: unless-stopped
+    environment:
+      MODEL_DIR: /models
+      PHOWHISPER_THREADS: "2"
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "1"
+    volumes:
+      - ${PHOWHISPER_MODEL_DIR:?Set versioned model directory}:/models:ro
+    mem_limit: 3g
+    cpus: 3
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10096/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 6
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

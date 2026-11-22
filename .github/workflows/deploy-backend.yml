@@ -1,5 +1,9 @@
 name: Deploy Backend & Core Services
 
+concurrency:
+  group: xiaozhi-production-services
+  cancel-in-progress: false
+
 on:
   push:
     branches:

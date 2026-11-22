@@ -81,3 +81,23 @@ WORKING_PRINCIPLES.md hiện không có mục CORE PROTOCOL; áp dụng phạm v
 - [x] Triển khai; 25 tuyến admin, 8 lượt điều hướng user, quyền 200/403, HTTPS/OTA/WSS PASS; có bản quay lui
 - Giới hạn: tên/nội dung cấu hình cũ và dữ liệu provider được giữ nguyên. Chưa thao tác gửi thật mọi biểu mẫu dịch vụ ngoài, upload/nhân bản giọng hoặc xóa dữ liệu người dùng; chỉ mở các biểu mẫu chính và kiểm tra tuyến.
 
+
+## PhoWhisper — kế hoạch bàn giao 2026-11-22
+
+Tài liệu chính: `PHOWHISPER_PLAN.md`. Chỉ dẫn agent: `../../AGENTS.md`.
+- [x] Nhánh `feat/phowhisper-asr`, kế hoạch triển khai và checklist bàn giao.
+- [ ] P1: Baseline, CPU/runtime và cơ chế chọn ASR.
+- [ ] P2–P4: Model INT8, bridge và CI/workflow ASR.
+- [ ] P5–P7: Deploy thử qua Actions/production, benchmark, chuyển cấu hình và kiểm tra rollback theo phạm vi được cho phép.
+Chưa viết code hoặc đổi VPS cho PhoWhisper. Agent tiếp theo bắt đầu từ P1 sau khi có yêu cầu thực hiện.
+
+### PhoWhisper — code đã triển khai
+- [x] Khảo sát CPU/RAM/container, baseline Gipformer một mẫu; xác minh ASR toàn cục.
+- [x] Chuyển model chính thức sang INT8 và kiểm tra WebSocket với model thật trên local ARM64.
+- [x] Bridge, image/converter, overlay, manifest/checksum, benchmark và API activate/rollback.
+- [x] Workflow CI/build/trial/benchmark/activate/rollback, guard production và khóa concurrency backend.
+- [x] 28 unittest PASS, Python compile, actionlint và Compose config PASS.
+- [ ] Chạy Docker/Linux CI, lưu workflow run URL/image digest.
+- [ ] Bộ mẫu nghiệm thu 30 speech/20 noise, benchmark trên VPS cùng VieNeu.
+- [ ] Trial/activate/rollback trên VPS qua Actions và xác nhận robot thật.
+Chi tiết số đo/giới hạn: PHOWHISPER_PLAN.md mục 8. Chưa deploy VPS hoặc đổi mặc định.

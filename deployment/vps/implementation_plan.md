@@ -1,3 +1,8 @@
+# Công việc hiện tại — PhoWhisper ASR, 2026-11-22
+
+Kế hoạch triển khai và checklist bàn giao: [PHOWHISPER_PLAN.md](PHOWHISPER_PLAN.md).
+Người dùng đã yêu cầu triển khai code trên nhánh `feat/phowhisper-asr`. Phạm vi: bridge CPU INT8, image/overlay, kiểm thử, benchmark harness, API activate/rollback và GitHub Actions. Chưa chuyển ASR mặc định hoặc deploy VPS trong task code này. Các mục dưới là lịch sử triển khai; quy trình phát hành hiện tại tuân thủ `../../DEPLOYMENT_GUIDE.md`.
+
 # Kế hoạch cài Xiaozhi Go trên VPS 194.233.73.211
 
 ## Việt hóa quản trị và tài khoản cá nhân — 2026-11-22
