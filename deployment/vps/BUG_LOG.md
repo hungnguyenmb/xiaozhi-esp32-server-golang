@@ -46,3 +46,13 @@
   - POST config upstream v0.6.5 tự ép is_default=true khi không có dòng memory dù đang tạo TTS. prepare đã khôi phục Edge ngay sau tạo; script sửa để giữ mặc định cũ trong bước prepare. Kích hoạt VieNeu sau khi kiểm tra đạt.
   - Nano stream theo đoạn hoàn tất, không phải từng frame. Phải dùng đoạn đầu ngắn và đo PCM/Opus thật, không dùng thời điểm header WAV để báo TTFA.
 
+
+## Kiểm tra PhoWhisper local — 2026-11-22
+
+- Compose config trên checkout thiếu runtime/vieneu.env riêng của VPS. Không đưa secret vào repo: CI tạo env rỗng chỉ cho validation, local kiểm tra với project directory tạm. --no-env-resolution vẫn có thể kiểm tra sự tồn tại file nên không đủ nếu thiếu file.
+- PyTorch wheel từ CPU index có thể có suffix +cpu. Kiểm tra phiên bản converter so phần trước dấu +, vẫn yêu cầu đúng 2.8.0; tránh từ chối wheel CPU đúng phiên bản.
+- Lượt đầu tải model Hugging Face gặp TLS handshake timeout mặc định; chạy lại với HF_HUB_ETAG_TIMEOUT=60 và HF_HUB_DOWNLOAD_TIMEOUT=120 thành công, không tắt xác minh TLS.
+
+## PhoWhisper Linux CI — 2026-11-23
+
+- Run 45084209503: Docker COPY không thấy requirements/bridge vì deployment/vps/.dockerignore cũ chỉ cho phép bundle backend. Thêm Dockerfile.phowhisper.dockerignore với allowlist 4 file đúng image mới, không mở rộng context để đưa runtime secrets/model cache vào image.

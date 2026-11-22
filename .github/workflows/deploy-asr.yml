@@ -1,0 +1,180 @@
+name: PhoWhisper ASR (CI and explicit deployment)
+
+on:
+  push:
+    branches: [production, feat/phowhisper-asr]
+    paths:
+      - 'deployment/vps/*phowhisper*'
+      - '.github/workflows/deploy-asr.yml'
+  pull_request:
+    paths:
+      - 'deployment/vps/*phowhisper*'
+      - '.github/workflows/deploy-asr.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'trial: sidecar; benchmark: A/B; activate: global ASR; rollback: previous'
+        type: choice
+        options: [trial, benchmark, activate, rollback]
+        default: trial
+      benchmark_run:
+        description: 'Evidence URL/report for activation (WER/CER, latency, TTS load)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Shared with backend: never mutate the same Compose project concurrently.
+concurrency:
+  group: xiaozhi-production-services
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Contract and rollout tests (no weights)
+        run: |
+          pip install aiohttp==3.13.2 numpy==2.2.6
+          python -m unittest discover -s deployment/vps -p 'test_*phowhisper*.py' -v
+          python -m compileall -q deployment/vps
+      - name: Validate Compose overlay
+        env:
+          PHOWHISPER_IMAGE: xiaozhi-phowhisper:validation
+          PHOWHISPER_MODEL_DIR: /tmp/phowhisper-model
+        run: |
+          mkdir -p deployment/vps/runtime
+          touch deployment/vps/runtime/vieneu.env
+          docker compose -f deployment/vps/compose.yaml -f deployment/vps/compose.phowhisper.yaml config --no-env-resolution --quiet
+
+  build:
+    needs: test
+    if: github.event_name != 'workflow_dispatch' || inputs.action == 'trial'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build INT8 model and validate CPU runtime
+        env:
+          RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          mkdir -p dist_phowhisper phowhisper-build/model
+          docker build --target converter -f deployment/vps/Dockerfile.phowhisper -t phowhisper-converter deployment/vps
+          docker run --rm -v "$PWD/phowhisper-build/model:/output" phowhisper-converter /output/converted
+          docker build --target runtime -f deployment/vps/Dockerfile.phowhisper -t "xiaozhi-phowhisper:$RELEASE_ID" deployment/vps
+          docker run --rm -v "$PWD/phowhisper-build/model/converted:/models:ro" --entrypoint python "xiaozhi-phowhisper:$RELEASE_ID" -c 'from pathlib import Path; from phowhisper_bridge import load_recognizer; load_recognizer(Path("/models"), 2); print("WARMUP_OK")'
+          tar -czf dist_phowhisper/model.tar.gz -C phowhisper-build/model/converted .
+          docker save "xiaozhi-phowhisper:$RELEASE_ID" | gzip > dist_phowhisper/image.tar.gz
+          cp deployment/vps/compose.phowhisper.yaml deployment/vps/verify_phowhisper.py deployment/vps/verify_tls.py dist_phowhisper/
+          python - <<'PY'
+          import hashlib, json, os, subprocess, urllib.request
+          from pathlib import Path
+          root = Path('dist_phowhisper')
+          # Public speech fixture already used by the existing Gipformer smoke test.
+          with urllib.request.urlopen('https://raw.githubusercontent.com/ggroup-ai-lab/gipformer/0c2a09006869b8e9c4c7ce395a63be8fe3b91984/data/audio1.wav', timeout=60) as response:
+              (root / 'speech.wav').write_bytes(response.read())
+          release = os.environ['RELEASE_ID']
+          image = 'xiaozhi-phowhisper:' + release
+          image_id = subprocess.check_output(['docker', 'image', 'inspect', image, '--format', '{{.Id}}'], text=True).strip()
+          hashes = {}
+          for name in ['model.tar.gz', 'image.tar.gz', 'speech.wav']:
+              with (root / name).open('rb') as stream:
+                  hashes[name] = hashlib.file_digest(stream, 'sha256').hexdigest()
+          (root / 'release.json').write_text(json.dumps({'release_id': release, 'image': image, 'image_id': image_id, 'sha256': hashes}, indent=2))
+          PY
+      - name: Test real Linux model over WebSocket
+        env:
+          RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          docker run -d --name phowhisper-ci -v "$PWD/phowhisper-build/model/converted:/models:ro" "xiaozhi-phowhisper:$RELEASE_ID"
+          ready=0
+          for attempt in $(seq 1 60); do
+            if docker exec phowhisper-ci python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10096/health', timeout=3)" >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            docker logs phowhisper-ci
+            exit 1
+          fi
+          docker run --rm --network container:phowhisper-ci -v "$PWD/dist_phowhisper:/checks:ro" --entrypoint python "xiaozhi-phowhisper:$RELEASE_ID" /checks/verify_phowhisper.py
+          docker run --rm --network container:phowhisper-ci -v "$PWD/dist_phowhisper:/checks:ro" --entrypoint python "xiaozhi-phowhisper:$RELEASE_ID" /checks/verify_phowhisper.py --wav /checks/speech.wav --expect-speech
+      - name: Stop CI-only model server
+        if: always()
+        run: docker rm -f phowhisper-ci || true
+      - name: Save tested release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: phowhisper-release
+          path: dist_phowhisper/
+          retention-days: 3
+          if-no-files-found: error
+
+  deploy:
+    needs: [test, build]
+    if: >-
+      always() && needs.test.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate activation evidence
+        env:
+          ACTION: ${{ inputs.action }}
+          BENCHMARK_RUN: ${{ inputs.benchmark_run }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          evidence = os.environ['BENCHMARK_RUN']
+          if evidence and not re.fullmatch(r'https://[A-Za-z0-9/_.?=&%#:+-]{1,480}', evidence):
+              raise SystemExit('Evidence must be an HTTPS URL without whitespace or shell quotes')
+          if os.environ['ACTION'] == 'activate' and not evidence:
+              raise SystemExit('Activation requires benchmark evidence. Run trial first.')
+          PY
+      - name: Download tested trial payload
+        if: inputs.action == 'trial'
+        uses: actions/download-artifact@v4
+        with:
+          name: phowhisper-release
+          path: dist_phowhisper
+      - name: Package rollout scripts
+        run: |
+          mkdir -p dist_phowhisper
+          cp deployment/vps/deploy_phowhisper.py deployment/vps/configure_phowhisper.py dist_phowhisper/
+      - name: Upload release payload
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: 'dist_phowhisper/'
+          target: /tmp/phowhisper-${{ github.run_id }}-${{ github.run_attempt }}
+          strip_components: 1
+      - name: Run explicit action on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          ASR_ACTION: ${{ inputs.action }}
+          BENCHMARK_RUN: ${{ inputs.benchmark_run }}
+          PAYLOAD: /tmp/phowhisper-${{ github.run_id }}-${{ github.run_attempt }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: ASR_ACTION,BENCHMARK_RUN,PAYLOAD
+          command_timeout: 15m
+          script: |
+            set -eu
+            python3 "$PAYLOAD/deploy_phowhisper.py" "$ASR_ACTION" --payload "$PAYLOAD" --benchmark-run "$BENCHMARK_RUN"
+      - name: Verify public services
+        run: |
+          curl --fail --retry 3 https://adminzeroone.hungnguyenaistem.online/ -o /dev/null
+          curl --fail --retry 3 https://otazeroone.hungnguyenaistem.online/xiaozhi/ota/ -o /dev/null

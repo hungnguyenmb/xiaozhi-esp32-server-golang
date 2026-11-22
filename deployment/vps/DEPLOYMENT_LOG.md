@@ -129,3 +129,13 @@ Xem BUG_LOG.md để biết hạn chế của công cụ test upstream với c�
 - Nginx -t/reload PASS. Public login/SPA/bundle 200, profile thiếu token 401, internal API 404. TLS/OTA HTTPS/WSS hello/WS thiếu token 401/HTTP redirect PASS. Container giữ healthy, không có thay đổi cấu hình hội thoại.
 
 - Hiệu chỉnh cuối trên điện thoại: nút Đổi câu hỏi không bị co/xuống dòng, rút gọn placeholder mật khẩu; build PASS, kiểm tra ảnh trên domain thật ở 390×844. Nginx -t PASS sau cập nhật.
+
+## PhoWhisper ASR — triển khai code, 2026-11-22
+
+- Nhánh feat/phowhisper-asr: thêm sidecar FunASR offline tương thích Go, faster-whisper 1.2.1/CTranslate2 4.6.0 INT8, VinAI base revision cố định; không đổi Go/firmware/Gipformer/LLM/TTS.
+- Queue một worker, 4 chỗ chờ; deadline không tạo inference native thứ hai khi phép gọi cũ chưa kết thúc. Validate PCM/control, health sau checksum/warm-up, metric không ghi transcript.
+- Thêm manifest/chuyển model/checksum, overlay nội bộ, benchmark WER/CER và rollout chọn lọc qua typed API. Actions bốn chế độ trial/benchmark/activate/rollback; production-only deployment, image ID và artifact hash, khóa concurrency chung backend.
+- Khảo sát VPS chỉ đọc: AMD AVX2, chưa thấy VNNI/AVX-512, khoảng 10 GB RAM khả dụng. Baseline Gipformer 5,08 giây audio: đơn 573 ms, 4 yêu cầu 172–769 ms. Chưa có WER/CER.
+- Model thật local ARM64 INT8, 2 threads: 511,4 ms tải đơn và 526,89–2137,8 ms/4 yêu cầu cho cùng mẫu speech. Silence zero rỗng; không phải benchmark VPS hoặc đánh giá noise/độ chính xác đầy đủ.
+- 28 unit tests PASS; Python compile/actionlint/Compose config PASS. Docker daemon local chưa chạy, chưa build image Linux/chạy CI hoặc deploy PhoWhisper trên VPS. Không đổi ASR mặc định, chưa xác minh robot thật.
+- Kế hoạch/bàn giao và lệnh đầy đủ: PHOWHISPER_PLAN.md mục 8 và DEPLOYMENT_GUIDE.md mục 6.
