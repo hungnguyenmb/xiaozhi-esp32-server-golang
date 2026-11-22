@@ -1,0 +1,6 @@
+# Dockerfile-specific allowlist; do not include runtime secrets or model caches.
+*
+!requirements.phowhisper.txt
+!phowhisper_bridge.py
+!prepare_phowhisper.py
+!phowhisper-manifest.json
