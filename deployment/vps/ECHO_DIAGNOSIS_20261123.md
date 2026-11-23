@@ -53,3 +53,11 @@ So sánh sơ bộ waveform: giải mã compact để ánh xạ packet, so mic 1 
 Ví dụ 22:07:46, frame đầu RMS khoảng 0,088 rồi frame kế 0,0087: có xung mở đầu ngắn nhưng chưa phân biệt được tiếng đuôi loa/động tác/AGC/đường mic chỉ từ dữ liệu này. Không kết luận firmware AEC bị tắt hoặc có lỗi ADC.
 
 Bước tiếp có giá trị: A/B cùng phòng không ai nói, cùng câu robot, âm lượng loa bình thường so với thấp; ghi mốc thực nghiệm rõ ràng. Sau đó quyết định guard sau mở mic và kiểm tra AEC/reference trong firmware. Chưa sửa threshold, chưa thêm guard, chưa thay ASR/LLM/TTS.
+
+## Người dùng xác nhận nhãn thực nghiệm
+
+Sau khi xem báo cáo, người dùng xác nhận: chỉ nói câu đầu tiên “xin chào”; mọi lượt sau đều là robot tự nói/tự trả lời hoặc nhận nhầm tiếng động. Thông tin này thay thế điểm chưa rõ trước đó về việc người dùng có nói tiếp hay không.
+
+Do đó có thể xác nhận false-positive hội thoại trong phiên 22:07: sau lượt đầu, các đoạn 420 ms/120 ms/540 ms sinh chữ rồi tạo thêm LLM/TTS không phải lời người dùng mới. Không chỉ là tương quan thời điểm đáng nghi. Chưa thể gắn nhãn mọi đoạn đó là echo giọng loa: nguyên nhân âm học vẫn có thể là tiếng động, transient khi mở mic, tiếng đuôi loa hoặc tổ hợp.
+
+Ưu tiên bước sửa tiếp theo: giữ snapshot thời lượng theo turn trước reset (khắc phục voice_ms=0), thêm cơ chế bảo vệ lúc auto-listen mở lại sau playback với xử lý buffer/VAD rõ ràng và kiểm thử không mất câu nói thật, đo A/B âm lượng/AEC. Không coi chỉ bật noise-filter hiện tại hay chặn từ “đây” là giải pháp đầy đủ. Đây là hướng đề xuất, chưa triển khai/deploy trong lượt xác nhận này.

@@ -69,3 +69,5 @@ Sau phát hành: kiểm tra audio_capture enabled, owner config, container healt
 ## Lượt đọc log/audio tiếp theo
 
 Đã có snapshot audio robot thật lúc 22:07–22:08, 823 mic/203 speaker packets và xuất WAV. Phân tích sơ bộ chưa chứng minh nội dung mic trùng lời loa; có tái kích hoạt đáng nghi sau mở mic. Chi tiết và giới hạn ở ECHO_DIAGNOSIS_20261123.md. Không đổi cấu hình/deploy trong lượt kiểm tra này.
+
+Người dùng đã xác nhận phiên 22:07 chỉ có một câu thật ban đầu “xin chào”; toàn bộ phản hồi sau là tự kích hoạt/nhận nhầm. Đây là nhãn thực nghiệm để đánh giá false positive; xem phần cập nhật ECHO_DIAGNOSIS_20261123.md trước tiếp tục sửa.
