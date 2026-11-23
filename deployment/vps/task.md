@@ -101,3 +101,11 @@ Chưa viết code hoặc đổi VPS cho PhoWhisper. Agent tiếp theo bắt đ�
 - [ ] Bộ mẫu nghiệm thu 30 speech/20 noise, benchmark trên VPS cùng VieNeu.
 - [ ] Trial/activate/rollback trên VPS qua Actions và xác nhận robot thật.
 Chi tiết số đo/giới hạn: PHOWHISPER_PLAN.md mục 8. Chưa deploy VPS hoặc đổi mặc định.
+
+### PhoWhisper — thử thực tế và quyết định 2026-11-23
+- [x] CI Linux, trial base/small qua Actions, health và TLS/OTA/WSS.
+- [x] 30 speech FLEURS +20 synthetic nonspeech; base đầy đủ tải 1/2/4, small tải đơn.
+- [x] Đánh giá phiên robot thật 08:04–08:07 và xác minh ASR mặc định vẫn vps_asr/Gipformer.
+- [x] Theo lựa chọn người dùng: giữ Gipformer; small vẫn kém về WER/độ trễ, không activate.
+- [x] Dừng tải đồng thời small còn lại, lưu report/giới hạn trong PHOWHISPER_EVALUATION_20261123.md.
+- Không đánh dấu P7 chuyển mặc định là hoàn tất: chuyển đổi không diễn ra vì kết quả không đạt và người dùng chọn giữ model cũ.
