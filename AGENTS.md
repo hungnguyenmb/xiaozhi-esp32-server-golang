@@ -8,3 +8,5 @@
 - Quyết định ngày 2026-11-23: giữ Gipformer mặc định sau khi thử PhoWhisper-base/small. Đọc `deployment/vps/PHOWHISPER_EVALUATION_20261123.md` trước khi đề xuất activate; cả hai chưa tốt hơn trên VPS hiện tại.
 
 - Chẩn đoán mic/VAD/ASR: đọc `deployment/vps/AUDIO_DIAGNOSTICS.md`. Log metadata bật qua chat.audio_diagnostics, mặc định mã nguồn tắt; trạng thái deploy/bật runtime ghi tại AUDIO_DIAGNOSTICS.md, chưa nghiệm thu robot thật.
+
+- Ghi âm đầy đủ: đọc `deployment/vps/FULL_AUDIO_CAPTURE.md`. Người dùng cho phép lưu toàn bộ mic/output server nhận/gửi; không tự xóa recordings, không đưa audio/WAV vào Git. Kiểm tra trạng thái bật runtime trong tài liệu; không nhầm packet nhận được với ghi mic phần cứng 24/7.

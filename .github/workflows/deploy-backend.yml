@@ -31,6 +31,11 @@ on:
         type: choice
         options: [unchanged, enabled, disabled]
         default: unchanged
+      audio_capture:
+        description: Full mic and speaker packet recording (private VPS storage)
+        type: choice
+        options: [unchanged, enabled, disabled]
+        default: unchanged
 
 
 jobs:
@@ -58,6 +63,7 @@ jobs:
           docker create --name xiaozhi_linux xiaozhi-build-linux
           mkdir -p dist_backend
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/xiaozhi_server dist_backend/xiaozhi_server
+          docker cp xiaozhi_linux:/out/audio_capture_export dist_backend/audio_capture_export
           docker rm xiaozhi_linux
           chmod +x dist_backend/xiaozhi_server
 
@@ -67,24 +73,25 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist_backend/xiaozhi_server"
+          source: "dist_backend/xiaozhi_server,dist_backend/audio_capture_export"
           target: "/tmp"
           strip_components: 1
 
       - name: Deploy and Reload Backend on VPS
         env:
           AUDIO_DIAGNOSTICS: ${{ inputs.audio_diagnostics || 'unchanged' }}
+          AUDIO_CAPTURE: ${{ inputs.audio_capture || 'unchanged' }}
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: AUDIO_DIAGNOSTICS
+          envs: AUDIO_DIAGNOSTICS,AUDIO_CAPTURE
           script: |
             set -eu
             cd /opt/docker/antigravity/xiaozhi-go
             CONFIG_BACKUP=""
-            if [ "$AUDIO_DIAGNOSTICS" != "unchanged" ]; then
+            if [ "$AUDIO_DIAGNOSTICS" != "unchanged" ] || [ "$AUDIO_CAPTURE" != "unchanged" ]; then
               CONFIG_BACKUP="runtime/config/main_config.yaml.diagnostics-$(date -u +%Y%m%dT%H%M%SZ).bak"
               cp -p runtime/config/main_config.yaml "$CONFIG_BACKUP"
               chmod 600 "$CONFIG_BACKUP"
@@ -95,16 +102,21 @@ jobs:
             path = Path("runtime/config/main_config.yaml")
             config = yaml.safe_load(path.read_text())
             chat = config.setdefault("chat", {})
-            diagnostics = chat.setdefault("audio_diagnostics", {})
-            diagnostics["enabled"] = os.environ["AUDIO_DIAGNOSTICS"] == "enabled"
-            diagnostics.setdefault("interval_ms", 1000)
+            if os.environ["AUDIO_DIAGNOSTICS"] != "unchanged":
+                diagnostics = chat.setdefault("audio_diagnostics", {})
+                diagnostics["enabled"] = os.environ["AUDIO_DIAGNOSTICS"] == "enabled"
+                diagnostics.setdefault("interval_ms", 1000)
+            if os.environ["AUDIO_CAPTURE"] != "unchanged":
+                capture = chat.setdefault("audio_capture", {})
+                capture["enabled"] = os.environ["AUDIO_CAPTURE"] == "enabled"
+                capture.setdefault("directory", "/app/storage/audio-captures")
             original_stat = path.stat()
             temporary = path.with_suffix(".diagnostics.tmp")
             temporary.write_text(yaml.safe_dump(config, allow_unicode=True, sort_keys=False))
             os.chown(temporary, original_stat.st_uid, original_stat.st_gid)
             temporary.chmod(original_stat.st_mode & 0o777)
             temporary.replace(path)
-            print("Audio diagnostics:", os.environ["AUDIO_DIAGNOSTICS"])
+            print("Audio diagnostics:", os.environ["AUDIO_DIAGNOSTICS"], "capture:", os.environ["AUDIO_CAPTURE"])
             PYCONFIG
             fi
             # Backup current working binary
@@ -115,6 +127,8 @@ jobs:
             # Place new binary
             mv /tmp/xiaozhi_server bundle/xiaozhi_server
             chmod 755 bundle/xiaozhi_server
+            mv /tmp/audio_capture_export bundle/audio_capture_export
+            chmod 755 bundle/audio_capture_export
             
             # Rebuild backend container image and restart backend service only
             docker compose build backend

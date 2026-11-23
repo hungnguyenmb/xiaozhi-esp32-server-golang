@@ -136,3 +136,7 @@ Chi tiết số đo/giới hạn: PHOWHISPER_PLAN.md mục 8. Chưa deploy VPS h
 Đã thêm log bật/tắt, thống kê RMS/peak/score VAD và ASR/endpoint, unit tests và hướng dẫn AUDIO_DIAGNOSTICS.md. Chưa lưu audio, chưa deploy, chưa có số đo robot thật.
 
 Xác minh chẩn đoán: test chat/TEN/Silero/hooks, race riêng chẩn đoán và TEN/Silero/hooks, vet và build server đạt. Race toàn chat còn lỗi MCP đã ghi BUG_LOG; Linux/robot thật chưa kiểm tra.
+
+## Lưu toàn bộ âm thanh
+
+Code capture/exporter và tests đã có trên feat/full-audio-capture. Còn CI Linux, deploy Actions bật capture và xác minh file/export trên VPS; đọc FULL_AUDIO_CAPTURE.md trước tiếp tục.

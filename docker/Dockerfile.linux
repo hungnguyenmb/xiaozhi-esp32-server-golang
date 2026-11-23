@@ -71,6 +71,8 @@ RUN go mod tidy \
 
 RUN upx --lzma xiaozhi_server -o xiaozhi_server.upx && mv xiaozhi_server.upx xiaozhi_server || true
 
+RUN mkdir -p /out && go build -tags nolibopusfile -ldflags "-s -w" -o /out/audio_capture_export ./cmd/audio-capture-export
+
 RUN PACK_DIR="/out/linux-amd64/xiaozhi_server-linux-amd64" \
     && mkdir -p "$PACK_DIR/ten-vad/lib/Linux/x64" "$PACK_DIR/logs" \
     && cp xiaozhi_server "$PACK_DIR/" \
