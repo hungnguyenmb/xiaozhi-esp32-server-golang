@@ -1,3 +1,7 @@
+# 2026-11-23 — đã bật lưu toàn bộ audio
+
+PR #10 deploy thành công qua Actions 45199579444, production f3c804b7. audio_capture enabled=true; cấu hình còn lại không đổi. Backend healthy/restarts=0, admin/OTA/WSS PASS. Probe lưu 100 mic+46 speaker packets, closed=true/dropped=0, xuất WAV cả hai hướng thành công. Không tự xóa recordings; đường dẫn và số đo/handoff tại FULL_AUDIO_CAPTURE.md. Chưa kết luận echo từ audio thật; cần lượt robot sau triển khai.
+
 # 2026-11-23 — deploy PR271 và bật chẩn đoán
 
 PR #6/#7/#8 đã merge production 2e685d3a. CI Linux 45191130321 và frontend deploy 45191741004 đạt; backend deploy bật chẩn đoán 45194051848 đạt. Backend healthy/restarts=0, admin 200, TLS/OTA/WSS smoke PASS. YAML ngoài audio_diagnostics không đổi, giữ Gipformer và silence=200 ms. Hai lỗi pipeline (fi, owner config) cùng rollback đã ghi BUG_LOG; chi tiết backup/hash/handoff ở AUDIO_DIAGNOSTICS.md. Chưa nghiệm thu mic/loa và nhiều robot thật.

@@ -1,3 +1,12 @@
+# Trạng thái lưu toàn bộ audio — 2026-11-23
+
+- [x] Capture mic/output trước gate chat, archive/timestamps, exporter WAV và tests.
+- [x] CI Linux đạt; PR #10 merge production, Actions 45199579444 deploy/bật capture thành công.
+- [x] File thực có đủ 100 mic+46 speaker packets ở probe, dropped=0, WAV xuất được; health/HTTPS/OTA/WSS đạt.
+- [ ] Thu lượt robot thật sau deploy và đối chiếu mic/loa để phân tích echo.
+
+Đọc FULL_AUDIO_CAPTURE.md. Các trạng thái phía dưới là lịch sử trước phát hành.
+
 # Trạng thái phát hành chẩn đoán — 2026-11-23
 
 - [x] Commit/push và merge PR #6/#7/#8 vào production.
