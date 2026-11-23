@@ -105,6 +105,8 @@ func (l *LLMManager) finishTTSTurnWithReason(ctx context.Context, stopErr error,
 }
 
 type llmResponseChannelOptions struct {
+	asrSourceCtx       context.Context
+	asrInputTurn       *ASRInputTurn
 	disableTTSCommands bool
 	onStartFunc        func(args ...any)
 	onEndFunc          func(err error, args ...any)

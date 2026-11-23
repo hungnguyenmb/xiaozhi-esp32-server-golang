@@ -81,3 +81,7 @@ Actions 45191781529 build thành công, bước SSH báo unexpected end of file 
 ## 2026-11-23 — atomic config write đổi owner
 
 Run 45192967450: backend mới không đọc được YAML do file thay thế thuộc root thay vì UID/GID 10001. Health rollback đã trả binary/config cũ. Sửa giữ st_uid/st_gid cùng mode trước replace; không chown sang root. Kiểm tra cấu hình trên VPS sau phát hành.
+
+## 2026-11-24 — snapshot ASR và race TTS khi abort
+
+OnVoiceSilence reset VAD trước final offline làm voice_ms=0. Đã giữ snapshot theo stream, chốt một lần trước reset, dùng cho log/hook; loop cũ không release resource của stream mới. Test keyword-abort race phát hiện Get/SetTtsStart không đồng bộ; đổi cờ sang atomic qua accessor. Vet đầy đủ client còn lostcancel ở InitLlm có sẵn; không sửa LLM ngoài phạm vi, kiểm tra các analyzer khác bằng lostcancel=false.

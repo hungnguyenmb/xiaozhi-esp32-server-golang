@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -68,4 +69,26 @@ func newAbortTestSession(listenMode string) (*ChatSession, *client.ClientState) 
 	}
 
 	return session, clientState
+}
+
+func TestAudioInputGateKeywordAbortStopsTTSWithoutGuard(t *testing.T) {
+	session, conn, cleanup := newStartedTTSControlTestSession(t)
+	defer cleanup()
+	state := session.clientState
+	state.ListenMode = "auto"
+	state.OpusAudioBuffer = make(chan client.OpusInputFrame, 8)
+	state.AudioInput.Configure(true, 300*time.Millisecond)
+	session.ttsManager.EnqueueTtsStart(context.Background())
+	require.Equal(t, msgdata.MessageStateStart, waitForServerMessage(t, conn, 0).State)
+	generation := session.ttsManager.currentAudioGeneration()
+	require.NoError(t, session.HandleAbortMessage(&client.ClientMessage{DeviceID: state.DeviceID, Reason: "wake_word_detected"}))
+	require.Equal(t, msgdata.MessageStateStop, waitForServerMessage(t, conn, 1).State)
+	require.Greater(t, session.ttsManager.currentAudioGeneration(), generation)
+	// Even a late natural-stop observation must not add settling to explicit wake.
+	state.AudioInput.PlaybackStopped(time.Now(), true)
+	epoch, guarded := state.AudioInput.BeginListen("auto", time.Now(), state.OpusAudioBuffer)
+	require.False(t, guarded)
+	state.AudioInput.Ready(epoch)
+	require.True(t, session.HandleAudioMessage([]byte{1}))
+	require.False(t, (<-state.OpusAudioBuffer).Discard)
 }

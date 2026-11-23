@@ -10,7 +10,8 @@ import (
 )
 
 type Asr struct {
-	lock sync.RWMutex
+	inputTurn *ASRInputTurn
+	lock      sync.RWMutex
 	// ASR 上下文和通道
 	Ctx              context.Context
 	Cancel           context.CancelFunc

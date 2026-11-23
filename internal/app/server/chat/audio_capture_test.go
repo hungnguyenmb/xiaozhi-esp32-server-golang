@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spf13/viper"
 	audio "xiaozhi-esp32-server-golang/internal/data/audio"
@@ -37,8 +38,15 @@ func TestAudioCaptureBeforeChatGatesAndSuccessfulOutput(t *testing.T) {
 	format := audio.AudioFormat{Format: "opus", SampleRate: 16000, Channels: 1, FrameDuration: 60}
 	transport.audioCapture.SetFormat("mic", format)
 	transport.audioCapture.SetFormat("speaker", format)
-	if _, err := transport.RecvAudio(context.Background(), 1); err != nil {
+	received, err := transport.RecvAudio(context.Background(), 1)
+	if err != nil {
 		t.Fatal(err)
+	}
+	state.OpusAudioBuffer = make(chan OpusInputFrame, 2)
+	state.AudioInput.Configure(true, 300*time.Millisecond)
+	session := &ChatSession{clientState: state}
+	if !session.HandleAudioMessage(received) || len(state.OpusAudioBuffer) != 0 {
+		t.Fatal("busy input must be archived but not queued to ASR")
 	}
 	conn.sendErr = errors.New("send failed")
 	if err := transport.SendAudio([]byte{4}); err == nil {

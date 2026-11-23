@@ -149,3 +149,7 @@ Xác minh chẩn đoán: test chat/TEN/Silero/hooks, race riêng chẩn đoán v
 ## Lưu toàn bộ âm thanh
 
 Code capture/exporter và tests đã có trên feat/full-audio-capture. Còn CI Linux, deploy Actions bật capture và xác minh file/export trên VPS; đọc FULL_AUDIO_CAPTURE.md trước tiếp tục.
+
+## Backend ASR gate — 2026-11-24
+
+Đã code và test local gate/snapshot/keyword abort, không sửa firmware. Còn CI Linux và phát hành/robot thật; bàn giao ASR_INPUT_GATE.md.

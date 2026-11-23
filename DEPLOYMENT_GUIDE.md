@@ -204,3 +204,7 @@ Ngày 2026-11-23: Actions backend 45194051848 thành công, audio_diagnostics en
 Xem [FULL_AUDIO_CAPTURE.md](deployment/vps/FULL_AUDIO_CAPTURE.md). Deploy Backend có input audio_capture=enabled/disabled/unchanged độc lập audio_diagnostics. Không tự xóa bản ghi; thư mục nằm trong runtime/storage riêng, không công khai.
 
 Trạng thái ngày 2026-11-23: audio_capture đã bật qua Actions 45199579444, archive và xuất WAV đã kiểm tra trên VPS. Đọc FULL_AUDIO_CAPTURE.md trước thu/phân tích dữ liệu; không tự xóa recordings.
+
+## ASR input gate (backend, giữ firmware)
+
+Đọc [ASR_INPUT_GATE.md](deployment/vps/ASR_INPUT_GATE.md). Workflow backend có input asr_input_gate=enabled/disabled/unchanged và post_tts_guard_ms. Khi chỉ chỉnh gate, giữ audio_capture/audio_diagnostics unchanged. Thiếu YAML mặc định bật guard 300 ms trong binary mới; phải đọc trạng thái rollout/nghiệm thu trước kết luận đã sửa hết nhận nhầm.
