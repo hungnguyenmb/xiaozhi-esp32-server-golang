@@ -1,3 +1,7 @@
+# 2026-11-24 — backend ASR gate đã phát hành
+
+PR14/15, production bad3c0d9, CI 45226007130 và deploy Actions 45226377103 thành công. Gate enabled/300 ms; snapshot giữ voice/time trước reset; keyword abort được ưu tiên; ASR rỗng tự reopen không cần TTS. Giữ firmware/model/capture/diagnostics và toàn bộ YAML ngoài gate. Backend healthy/restarts=0, HTTPS/OTA/WSS PASS; archive probe 100 mic+47 speaker/dropped=0. Chưa nghiệm thu robot thật. Handoff/hash/rollback và giới hạn ở ASR_INPUT_GATE.md.
+
 # 2026-11-23 — đã bật lưu toàn bộ audio
 
 PR #10 deploy thành công qua Actions 45199579444, production f3c804b7. audio_capture enabled=true; cấu hình còn lại không đổi. Backend healthy/restarts=0, admin/OTA/WSS PASS. Probe lưu 100 mic+46 speaker packets, closed=true/dropped=0, xuất WAV cả hai hướng thành công. Không tự xóa recordings; đường dẫn và số đo/handoff tại FULL_AUDIO_CAPTURE.md. Chưa kết luận echo từ audio thật; cần lượt robot sau triển khai.

@@ -208,3 +208,5 @@ Trạng thái ngày 2026-11-23: audio_capture đã bật qua Actions 45199579444
 ## ASR input gate (backend, giữ firmware)
 
 Đọc [ASR_INPUT_GATE.md](deployment/vps/ASR_INPUT_GATE.md). Workflow backend có input asr_input_gate=enabled/disabled/unchanged và post_tts_guard_ms. Khi chỉ chỉnh gate, giữ audio_capture/audio_diagnostics unchanged. Thiếu YAML mặc định bật guard 300 ms trong binary mới; phải đọc trạng thái rollout/nghiệm thu trước kết luận đã sửa hết nhận nhầm.
+
+Ngày 2026-11-24: ASR gate đã bật 300 ms qua Actions 45226377103; snapshot và empty retry đã sửa, health/probe đạt. Đọc ASR_INPUT_GATE.md để kiểm tra robot thật, điều chỉnh/tắt gate bằng Actions. Không đổi firmware hoặc tự xóa recordings.

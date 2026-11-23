@@ -2,7 +2,7 @@
 
 ## Phạm vi và trạng thái
 
-Người dùng đồng ý triển khai phương án backend, giữ nguyên firmware zero-one. Code trên `fix/asr-post-playback-gate`; chưa deploy ở thời điểm viết mục này. Giữ Gipformer/LLM/TTS, keyword tại ESP32 và audio_capture/audio_diagnostics hiện hữu. Đọc WAKE_WORD_INTERRUPT_PLAN.md và ECHO_DIAGNOSIS_20261123.md để biết baseline: người dùng chỉ nói “xin chào” ban đầu, các lượt sau là false positives.
+Người dùng đồng ý triển khai phương án backend, giữ nguyên firmware zero-one. Code từ `fix/asr-post-playback-gate` đã merge qua PR #14/#15, production `bad3c0d9`; đã deploy và bật qua Actions 45226377103 thành công. Giữ Gipformer/LLM/TTS, keyword tại ESP32 và audio_capture/audio_diagnostics hiện hữu. Đọc WAKE_WORD_INTERRUPT_PLAN.md và ECHO_DIAGNOSIS_20261123.md để biết baseline: người dùng chỉ nói “xin chào” ban đầu, các lượt sau là false positives.
 
 ## Hành vi
 
@@ -48,7 +48,7 @@ Input audio_diagnostics/audio_capture để unchanged khi chỉ điều chỉnh 
 - Snapshot: giữ 420 ms voice/540 ms idle qua reset, không bị lần seal zero ghi đè, turn mới độc lập.
 - Keyword abort thực sự dừng active TTS và đổi generation; kể cả một stop muộn vẫn không guard command mới. Capture test chứng minh audio busy vẫn archive nhưng không vào queue ASR.
 - Vet chat/cmd đạt; client vet với lostcancel=false đạt. Vet đầy đủ client còn cảnh báo InitLlm context leak có sẵn, không sửa trong phạm vi này. Race toàn chat còn MCP reinit đã ghi từ trước, không tuyên bố toàn repo sạch race.
-- Workflow qua actionlint/bash -n, mock deploy success/health rollback giữ nguyên YAML còn lại/owner/mode. CI Linux và robot thật còn chờ.
+- Workflow qua actionlint/bash -n, mock deploy success/health rollback giữ nguyên YAML còn lại/owner/mode. CI Linux 45226007130 đã qua, gồm bản sửa empty retry; robot thật sau rollout còn chờ.
 
 Có dò offline dữ liệu cũ bằng native TEN ở Mac (hop512/threshold0.4) và PCM đã decode, nhưng mô phỏng chưa tái hiện đầy đủ vòng đời pool/endpoint/log thực. Guard đơn thuần không phải bộ phân loại tiếng động hoàn chỉnh; không coi phép dò đó là benchmark đạt hoặc bằng chứng đã hết false positives. Chưa đổi ngưỡng VAD, chưa bật noise filter runtime để che lỗi. Cần đo robot thật sau deploy, nhất là câu nói ngay sau robot để kiểm tra mất đầu câu.
 
@@ -63,3 +63,19 @@ Bổ sung rà soát: bắt đầu epoch mới sau khi đã đồng bộ stop out
 Rà soát vòng đời phiên: Configure ở phiên mới vô hiệu epoch/trạng thái nghe cũ; Close/ResetToSilentState đóng gate. Full tests/race chọn lọc sau cập nhật đạt, có test reconfigure không chấp nhận audio từ phiên trước.
 
 Rà soát trước phát hành phát hiện ASR trả rỗng không có TTS/client listen-start để mở gate. Đã dừng build trước deploy và thêm restartASRInputForRetry: auto retry tự tạo epoch/đợi provider/Ready, không chờ playback; lỗi restart giữ gate đóng. Test empty retry không TTS và failure path là bắt buộc. Không thay model hoặc firmware.
+
+## Lượt phát hành 2026-11-24
+
+- PR #14: gate/epoch/snapshot và handoff theo source context. CI Linux 45224625088 đạt.
+- PR #15: tự mở lại auto ASR sau kết quả rỗng/transient, không chờ TTS; CI Linux 45226007130 đạt.
+- Build 45225225393 bị hủy trước deploy khi rà soát empty retry; binary VPS cũ vẫn SHA256 `6807ceaac08192dba7bb53f9740020c138bbe76c4590623771af3505400810ad`, image `sha256:d4055b867d2df6a5a8d478f7cfb67de11f68a4c7aad4c61dbec66836cfafe30f`, healthy/restarts=0. Không coi PR #14 riêng lẻ là bản đã nghiệm thu.
+- Release hiện hành: Actions 45226377103, ref production bad3c0d9, asr_input_gate=enabled/post_tts_guard_ms=300, capture/diagnostics unchanged. VPS đã xác minh thành công như mục bên dưới.
+
+## Xác minh VPS sau phát hành
+
+- Actions [45226377103](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45226377103) thành công; code production bad3c0d9 (gồm PR14 và PR15).
+- Core SHA256: `10ce67289f12961eda3f85bbb47e6feb4dbd8b800ec0bc4b4bb2546192ac717e`.
+- Runtime `asr_input_gate={enabled: true, post_tts_guard_ms: 300}`; so YAML với backup `main_config.yaml.diagnostics-20261123T172431Z.bak` xác nhận mọi mục ngoài gate không đổi. Config vẫn owner 10001:10001/mode0600. Capture và diagnostics giữ enabled=true.
+- Backend healthy/restarts=0; ASR Gipformer/TTS/gateway không restart. Admin HTTPS 200; TLS/OTA/WSS hello, route protection và HTTP redirect qua probe PASS.
+- Probe `20261123T172523Z-2969557647` gửi synthetic silence trên thiết bị test chưa activated: archive có 100 mic+47 speaker packets, closed=true/dropped=0. `ASR_INPUT_GATE explicit_abort ... wake_word=true` xuất hiện. Probe này xác minh wire/control/capture và health, không xác minh VAD/ASR của robot activated hay khả năng nhận keyword vật lý. Trường device trong log abort dùng msg.DeviceID nên có thể trống nếu client không gửi; đối chiếu thêm session ở log command/capture.
+- Chưa có lượt robot thật sau deploy để kết luận đã hết tự nói. Người dùng cần thử một câu rồi im lặng, keyword giữa TTS, câu ngắn và nói ngay sau robot; lấy timestamp đối chiếu log/capture. Guard chỉ xử lý vùng chuyển lượt, không thay thế khử vọng/phân loại tiếng động hoàn chỉnh.
