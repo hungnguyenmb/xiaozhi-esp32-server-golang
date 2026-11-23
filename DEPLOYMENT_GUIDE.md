@@ -198,3 +198,7 @@ Workflow sử dụng các SSH secrets sẵn có; tài khoản Manager lấy từ
 Xem [AUDIO_DIAGNOSTICS.md](deployment/vps/AUDIO_DIAGNOSTICS.md) để bật/tắt metadata RMS/VAD/ASR và thực hiện buổi đo. Mặc định tắt, không lưu audio hoặc transcript mới. Deploy qua GitHub Actions như quy trình hiện hữu.
 
 Ngày 2026-11-23: Actions backend 45194051848 thành công, audio_diagnostics enabled=true/interval_ms=1000. Tắt bằng workflow Deploy Backend & Core Services, ref production, input audio_diagnostics=disabled; unchanged giữ trạng thái hiện hữu. Không tự bật noise filter runtime. Xem kết quả và giới hạn robot thật trong tài liệu chẩn đoán.
+
+## Lưu đầy đủ audio
+
+Xem [FULL_AUDIO_CAPTURE.md](deployment/vps/FULL_AUDIO_CAPTURE.md). Deploy Backend có input audio_capture=enabled/disabled/unchanged độc lập audio_diagnostics. Không tự xóa bản ghi; thư mục nằm trong runtime/storage riêng, không công khai.

@@ -72,3 +72,7 @@ Run 45192967450 health check thất bại do file YAML mới thuộc root; rollb
 - Chưa có kết quả đo mic/loa thật. Người dùng cần thử bốn tình huống đã liệt kê trước khi chỉnh ngưỡng; giữ log tạm thời rồi tắt qua Actions.
 
 Smoke probe gửi Opus im lặng tổng hợp qua kết nối test và xác nhận setup/HTTPS/WSS; chưa quan sát được window/endpoint trong phiên giả lập này. Không coi phép thử đó là xác minh đủ luồng mic/ASR: cần robot thật vào phiên nghe để thu AUDIO_DIAG window/asr. Không lưu audio cá nhân.
+
+## Lượt robot thật sau phát hành
+
+Đã có log window/endpoint/asr trong lượt 21:38–21:39. Có dấu hiệu tái kích hoạt ngay sau TTS stop; xem ECHO_DIAGNOSIS_20261123.md. asr.voice_ms bị reset về 0 trước kết quả offline nên chưa dùng làm số đo độ dài; dùng endpoint.voice_ms. Lượt này chỉ chẩn đoán, chưa sửa/deploy thêm.

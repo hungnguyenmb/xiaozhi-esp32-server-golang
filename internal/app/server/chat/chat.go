@@ -315,6 +315,9 @@ func (c *ChatManager) ReloadDeviceConfig(ctx context.Context) error {
 	openclaw.GetManager().ExitMode(oldAgentID, c.DeviceID)
 	openclaw.GetManager().ExitMode(c.clientState.AgentID, c.DeviceID)
 	applyOutputAudioFormatForTTS(c.clientState)
+	if c.serverTransport != nil {
+		c.serverTransport.audioCapture.SetFormat("speaker", c.clientState.OutputAudioFormat)
+	}
 	log.Infof("设备 %s 配置已刷新，当前agent=%s", c.DeviceID, deviceConfig.AgentId)
 	return nil
 }
@@ -475,6 +478,8 @@ func (c *ChatManager) HandleHelloMessage(msg *ClientMessage) error {
 
 	clientState := c.clientState
 	clientState.InputAudioFormat = *msg.AudioParams
+	c.serverTransport.audioCapture.SetFormat("mic", *msg.AudioParams)
+	c.serverTransport.audioCapture.SetFormat("speaker", clientState.OutputAudioFormat)
 	isFirstHello := !c.helloInited
 	requiresFreshHello := c.requiresFreshHello()
 	isDuplicateMqttHello := !isFirstHello && !requiresFreshHello &&
@@ -1666,6 +1671,9 @@ func (c *ChatManager) refreshDeviceConfigOnHello() error {
 	c.clientState.SystemPrompt = deviceConfig.SystemPrompt
 	c.clientState.SpeakerTTSConfig = nil
 	applyOutputAudioFormatForTTS(c.clientState)
+	if c.serverTransport != nil {
+		c.serverTransport.audioCapture.SetFormat("speaker", c.clientState.OutputAudioFormat)
+	}
 
 	log.Infof("设备 %s hello 刷新配置成功，agent: %s -> %s", c.clientState.DeviceID, prevAgentID, deviceConfig.AgentId)
 	return nil

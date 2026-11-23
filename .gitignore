@@ -10,3 +10,6 @@ config_shijingbo.yaml
 __pycache__/
 dist_phowhisper/
 phowhisper-build/
+
+# Private audio diagnostic recordings
+**/audio-captures/

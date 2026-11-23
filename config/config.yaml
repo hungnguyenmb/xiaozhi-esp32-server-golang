@@ -11,6 +11,9 @@ auth:
 
 # 聊天配置
 chat:
+  audio_capture:
+    enabled: false # Archive ALL received/successfully sent audio packets, not VAD only
+    directory: /app/storage/audio-captures
   audio_diagnostics:
     enabled: false # Temporary metadata-only diagnostics, no audio/transcripts
     interval_ms: 1000 # Clamped to 500..10000; restart backend to apply

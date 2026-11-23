@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"strings"
 	"sync"
 	"time"
@@ -12,12 +13,14 @@ import (
 	types_audio "xiaozhi-esp32-server-golang/internal/data/audio"
 	. "xiaozhi-esp32-server-golang/internal/data/client"
 	. "xiaozhi-esp32-server-golang/internal/data/msg"
+	"xiaozhi-esp32-server-golang/internal/domain/audio/capture"
 	log "xiaozhi-esp32-server-golang/logger"
 )
 
 // ServerTransport handles sending messages to the client via the transport layer
 // (原ServerMsgService)
 type ServerTransport struct {
+	audioCapture   *capture.Recorder
 	transport      types_conn.IConn
 	clientState    *ClientState
 	McpRecvMsgChan chan []byte
@@ -50,11 +53,24 @@ func (s *ServerTransport) DrainPendingAudio() int {
 }
 
 func NewServerTransport(transport types_conn.IConn, clientState *ClientState) *ServerTransport {
-	return &ServerTransport{
+	s := &ServerTransport{
 		transport:      transport,
 		clientState:    clientState,
 		McpRecvMsgChan: make(chan []byte, 100),
 	}
+	if viper.GetBool("chat.audio_capture.enabled") {
+		root := viper.GetString("chat.audio_capture.directory")
+		if root == "" {
+			root = "/app/storage/audio-captures"
+		}
+		recorder, err := capture.New(root, clientState.DeviceID)
+		if err != nil {
+			log.Errorf("AUDIO_CAPTURE initialization failed: device=%s err=%v", clientState.DeviceID, err)
+		} else {
+			s.audioCapture = recorder
+		}
+	}
+	return s
 }
 
 func (s *ServerTransport) SendTtsStart() error {
@@ -71,6 +87,7 @@ func (s *ServerTransport) SendTtsStart() error {
 	if err != nil {
 		return err
 	}
+	s.audioCapture.Event("tts_start")
 	s.clientState.SetTtsStart(true)
 	return nil
 }
@@ -98,6 +115,7 @@ func (s *ServerTransport) SendTtsStop() error {
 	if err != nil {
 		return err
 	}
+	s.audioCapture.Event("tts_stop")
 	s.clientState.IsWelcomePlaying = false
 	// 一轮对话播报结束后，回到可触发下一轮对话的状态。
 	s.clientState.SetStatus(ClientStatusListenStop)
@@ -251,7 +269,13 @@ func (s *ServerTransport) SendCmd(cmdBytes []byte) error {
 }
 
 func (s *ServerTransport) SendAudio(audio []byte) error {
-	return s.transport.SendAudio(audio)
+	err := s.transport.SendAudio(audio)
+	if err == nil {
+		s.audioCapture.Audio("speaker", audio)
+	} else {
+		s.audioCapture.Event("speaker_send_error")
+	}
+	return err
 }
 
 func (s *ServerTransport) GetTransportType() string {
@@ -352,6 +376,7 @@ func (s *ServerTransport) close(closeUnderlyingTransport bool) error {
 	}
 
 	s.closed = true
+	s.audioCapture.Close()
 
 	if closeUnderlyingTransport && s.transport.GetTransportType() == types_conn.TransportTypeMqttUdp {
 		if err := s.SendMqttGoodbye(); err != nil {
@@ -367,7 +392,11 @@ func (s *ServerTransport) close(closeUnderlyingTransport bool) error {
 }
 
 func (s *ServerTransport) RecvAudio(ctx context.Context, timeOut int) ([]byte, error) {
-	return s.transport.RecvAudio(ctx, timeOut)
+	data, err := s.transport.RecvAudio(ctx, timeOut)
+	if err == nil {
+		s.audioCapture.Audio("mic", data)
+	}
+	return data, err
 }
 
 func (s *ServerTransport) RecvCmd(ctx context.Context, timeOut int) ([]byte, error) {

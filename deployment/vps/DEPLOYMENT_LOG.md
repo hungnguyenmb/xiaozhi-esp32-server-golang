@@ -158,3 +158,7 @@ Xem BUG_LOG.md để biết hạn chế của công cụ test upstream với c�
 ## 2026-11-23 — thêm chẩn đoán cục bộ, không deploy
 
 Bổ sung AUDIO_DIAG, cấu hình tắt mặc định, accessor xác suất TEN/Silero và unit tests. Không thay threshold/ASR/LLM/TTS. Bàn giao và cách bật/đọc: AUDIO_DIAGNOSTICS.md.
+
+## 2026-11-23 — phát triển lưu toàn bộ audio
+
+Người dùng yêu cầu lưu đầy đủ, không chỉ VAD. Thêm capture Opus theo kết nối tại transport, markers/timestamps, writer async có báo thiếu/lỗi, rotation giữ dữ liệu, free-space guard Linux/macOS, exporter WAV và toggle Actions. Kiểm thử và trạng thái phát hành trong FULL_AUDIO_CAPTURE.md.
