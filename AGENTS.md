@@ -7,4 +7,4 @@
 - Cập nhật tiến độ thực và giới hạn kiểm chứng trong kế hoạch/task khi bàn giao cho agent khác. Không đưa secrets, model weights hoặc audio cá nhân lên Git.
 - Quyết định ngày 2026-11-23: giữ Gipformer mặc định sau khi thử PhoWhisper-base/small. Đọc `deployment/vps/PHOWHISPER_EVALUATION_20261123.md` trước khi đề xuất activate; cả hai chưa tốt hơn trên VPS hiện tại.
 
-- Chẩn đoán mic/VAD/ASR: đọc `deployment/vps/AUDIO_DIAGNOSTICS.md`. Log metadata bật qua chat.audio_diagnostics, mặc định tắt; chưa deploy/đo robot, không tự coi số liệu thử là production.
+- Chẩn đoán mic/VAD/ASR: đọc `deployment/vps/AUDIO_DIAGNOSTICS.md`. Log metadata bật qua chat.audio_diagnostics, mặc định mã nguồn tắt; trạng thái deploy/bật runtime ghi tại AUDIO_DIAGNOSTICS.md, chưa nghiệm thu robot thật.

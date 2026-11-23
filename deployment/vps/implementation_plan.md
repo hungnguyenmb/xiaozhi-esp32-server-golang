@@ -1,3 +1,7 @@
+# Kết quả phát hành — 2026-11-23
+
+Đã hoàn tất CI, merge và deploy qua Actions 45194051848; bật log chẩn đoán, giữ cấu hình khác, backend healthy và HTTPS/OTA/WSS đạt. Bước tiếp là thử robot thật và hiệu chỉnh bằng số đo. Đọc AUDIO_DIAGNOSTICS.md/BUG_LOG.md trước tiếp tục; không coi smoke test là nghiệm thu tiếng nói thực tế.
+
 # Phát hành PR271 và chẩn đoán — 2026-11-23
 
 Người dùng yêu cầu deploy VPS. Commit/push nhánh, chạy CI Linux trước merge production; deploy frontend/backend qua Actions. Dispatch backend với audio_diagnostics=enabled để cập nhật chọn lọc cấu hình và bật log, giữ Gipformer/LLM/TTS/ngưỡng hiện hữu. Xác minh container, HTTPS và log/setup; chưa coi robot thật đã nghiệm thu. Ghi lại commit/run và rollback trong AUDIO_DIAGNOSTICS.md.
