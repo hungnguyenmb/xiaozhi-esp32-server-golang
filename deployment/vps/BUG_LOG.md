@@ -77,3 +77,7 @@ Race test toàn chat thất bại ở MCP reinit: waitForMcpInitState đọc tr�
 ## 2026-11-23 — script bật chẩn đoán thiếu fi
 
 Actions 45191781529 build thành công, bước SSH báo unexpected end of file do if cấu hình thiếu fi. Backend cũ vẫn healthy, SHA binary chưa đổi. Đã bổ sung fi và kiểm tra bash -n trên script trích xuất từ YAML trước chạy lại.
+
+## 2026-11-23 — atomic config write đổi owner
+
+Run 45192967450: backend mới không đọc được YAML do file thay thế thuộc root thay vì UID/GID 10001. Health rollback đã trả binary/config cũ. Sửa giữ st_uid/st_gid cùng mode trước replace; không chown sang root. Kiểm tra cấu hình trên VPS sau phát hành.
