@@ -61,3 +61,5 @@ Sau CI/release: kiểm tra config enabled/guard và các mục khác không đ�
 Bổ sung rà soát: bắt đầu epoch mới sau khi đã đồng bộ stop output cũ. Sau speaker/hook có kiểm tra context/token trước side effects; chuyển kết quả vào LLM giữ source context/input token và publish dưới stopSpeakingMu, tránh gắn câu cũ vào SessionCtx mới. Test context hủy và token bị thay đều không tạo item LLM; release ownership kiểm tra trong cùng resourceMu với slot provider.
 
 Rà soát vòng đời phiên: Configure ở phiên mới vô hiệu epoch/trạng thái nghe cũ; Close/ResetToSilentState đóng gate. Full tests/race chọn lọc sau cập nhật đạt, có test reconfigure không chấp nhận audio từ phiên trước.
+
+Rà soát trước phát hành phát hiện ASR trả rỗng không có TTS/client listen-start để mở gate. Đã dừng build trước deploy và thêm restartASRInputForRetry: auto retry tự tạo epoch/đợi provider/Ready, không chờ playback; lỗi restart giữ gate đóng. Test empty retry không TTS và failure path là bắt buộc. Không thay model hoặc firmware.

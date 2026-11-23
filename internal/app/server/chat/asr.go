@@ -701,11 +701,13 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 		}()
 
 		restartRecognition := func() error {
-			err := a.RestartAsrRecognition(ctx)
-			if err == nil {
-				ownedTurn = state.Asr.InputTurn()
-			}
-			return err
+			return restartASRInputForRetry(state, func() error {
+				err := a.RestartAsrRecognition(ctx)
+				if err == nil {
+					ownedTurn = state.Asr.InputTurn()
+				}
+				return err
+			})
 		}
 		//最大空闲 60s
 		var startIdleTime, maxIdleTime int64

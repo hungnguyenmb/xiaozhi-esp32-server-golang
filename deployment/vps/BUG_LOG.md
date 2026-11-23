@@ -85,3 +85,7 @@ Run 45192967450: backend mới không đọc được YAML do file thay thế th
 ## 2026-11-24 — snapshot ASR và race TTS khi abort
 
 OnVoiceSilence reset VAD trước final offline làm voice_ms=0. Đã giữ snapshot theo stream, chốt một lần trước reset, dùng cho log/hook; loop cũ không release resource của stream mới. Test keyword-abort race phát hiện Get/SetTtsStart không đồng bộ; đổi cờ sang atomic qua accessor. Vet đầy đủ client còn lostcancel ở InitLlm có sẵn; không sửa LLM ngoài phạm vi, kiểm tra các analyzer khác bằng lostcancel=false.
+
+## 2026-11-24 — gate sau ASR rỗng
+
+Phát hiện khi rà soát release: endpoint đóng gate nhưng ASR rỗng không tạo TTS/listen-start nên retry phải tự mở lại. Đã dừng build 45225225393 trước deploy, bổ sung helper tái khởi tạo gate cùng provider và test ASR rỗng/failure; không để robot bị kẹt sau tiếng động không ra chữ.
