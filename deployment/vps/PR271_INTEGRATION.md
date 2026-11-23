@@ -1,6 +1,6 @@
 # Tích hợp PR #271 — 2026-11-23
 
-Trạng thái: triển khai cục bộ trên `feat/vad-noise-filter-271`, từ production `a883cca5`. Chưa commit/push phần tích hợp, chưa merge hoặc deploy. Gipformer, LLM, TTS và VPS giữ nguyên.
+Trạng thái: PR #6 đã merge production từ nhánh feat/vad-noise-filter-271; CI Linux đạt (45191130321). Đã deploy qua Actions 45194051848; kết quả và trạng thái bật log tại AUDIO_DIAGNOSTICS.md. Giữ Gipformer/LLM/TTS và ngưỡng runtime.
 
 ## Nguồn và thay đổi
 
@@ -23,7 +23,7 @@ Nguồn: https://github.com/hackers365/xiaozhi-esp32-server-golang/pull/271 — 
 
 Môi trường Go local dùng `GOTOOLCHAIN=go1.24.4`, `TMPDIR=/private/tmp`, `CGO_CFLAGS=-I/tmp/xiaozhi-ort-test/onnxruntime-linux-x64-1.21.0/include` và `CGO_LDFLAGS='-L/tmp/xiaozhi-ort-test/lib -Wl,-rpath,/tmp/xiaozhi-ort-test/lib'`. Runtime ONNX macOS có sẵn là 1.32.0, khác Linux production 1.21.0. Go 1.26 hệ thống không tương thích dependency sonic hiện tại. Vet toàn cây VAD bị chặn bởi ví dụ/test upstream có main trùng và NewWebRTCVADPool không tồn tại; không sửa ngoài phạm vi.
 
-Workflow `.github/workflows/ci-vad-noise-filter.yml` kiểm tra native Linux ONNX 1.21.0, Go 1.24.11, tests/race/vet/build và frontend; không có bước deploy. Chưa chạy trên GitHub vì chưa push phần tích hợp.
+Workflow `.github/workflows/ci-vad-noise-filter.yml` kiểm tra native Linux ONNX 1.21.0, Go 1.24.11, tests/race/vet/build và frontend; không có bước deploy. Đã chạy thành công trên GitHub (45191130321).
 
 ## Trước khi phát hành
 

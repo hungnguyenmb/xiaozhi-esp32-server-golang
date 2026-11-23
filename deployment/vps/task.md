@@ -1,3 +1,13 @@
+# Trạng thái phát hành chẩn đoán — 2026-11-23
+
+- [x] Commit/push và merge PR #6/#7/#8 vào production.
+- [x] CI Linux tests/vet/build và frontend đạt.
+- [x] Deploy qua Actions, bật log tạm thời, kiểm tra health/HTTPS/OTA/WSS và cấu hình.
+- [ ] Thử robot thật trong im lặng/nhiễu/loa phát/lời nói ngắn, ghi số đo.
+- [ ] Hiệu chỉnh dựa trên số đo rồi tắt chẩn đoán qua Actions.
+
+Bàn giao hiện hành: AUDIO_DIAGNOSTICS.md. Các mục dưới là lịch sử trước phát hành.
+
 # PR #271 — 2026-11-23
 
 - [x] Tích hợp upstream trên nhánh thử; giữ tiếng Việt và Gipformer.

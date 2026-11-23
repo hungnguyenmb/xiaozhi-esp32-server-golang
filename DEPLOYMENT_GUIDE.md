@@ -1,6 +1,6 @@
-## Tích hợp VAD/ASR PR #271 (nhánh thử)
+## Tích hợp VAD/ASR PR #271
 
-Xem [kế hoạch kiểm tra và phát hành](deployment/vps/PR271_INTEGRATION.md). Chưa triển khai trên VPS. Phát hành qua GitHub Actions sau CI/review; YAML runtime cũ cần migration chọn lọc để bật noise filter, không chép đè secrets hoặc đổi Gipformer.
+Xem [kế hoạch kiểm tra và phát hành](deployment/vps/PR271_INTEGRATION.md). Đã triển khai ngày 2026-11-23 qua GitHub Actions; xem kết quả trong AUDIO_DIAGNOSTICS.md. YAML runtime cũ cần migration chọn lọc để bật noise filter, không chép đè secrets hoặc đổi Gipformer.
 
 # HƯỚNG DẪN TRIỂN KHAI VÀ SỬ DỤNG GITHUB ACTIONS (CI/CD)
 > **Dành cho các AI Agent và Developer tiếp quản dự án `xiaozhi-esp32-server-golang`**
@@ -193,6 +193,8 @@ WER/CER sử dụng chuẩn hóa NFC, chữ thường, bỏ dấu câu, giữ d�
 
 Workflow sử dụng các SSH secrets sẵn có; tài khoản Manager lấy từ file riêng `/root/.config/xiaozhi-go/admin.json` trên VPS, không cần đưa mật khẩu/token vào Actions.
 
-## Log chẩn đoán âm thanh (chưa deploy)
+## Log chẩn đoán âm thanh (đã deploy, đang bật tạm thời)
 
 Xem [AUDIO_DIAGNOSTICS.md](deployment/vps/AUDIO_DIAGNOSTICS.md) để bật/tắt metadata RMS/VAD/ASR và thực hiện buổi đo. Mặc định tắt, không lưu audio hoặc transcript mới. Deploy qua GitHub Actions như quy trình hiện hữu.
+
+Ngày 2026-11-23: Actions backend 45194051848 thành công, audio_diagnostics enabled=true/interval_ms=1000. Tắt bằng workflow Deploy Backend & Core Services, ref production, input audio_diagnostics=disabled; unchanged giữ trạng thái hiện hữu. Không tự bật noise filter runtime. Xem kết quả và giới hạn robot thật trong tài liệu chẩn đoán.

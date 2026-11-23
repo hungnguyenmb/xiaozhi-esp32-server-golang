@@ -1,3 +1,7 @@
+# 2026-11-23 — deploy PR271 và bật chẩn đoán
+
+PR #6/#7/#8 đã merge production 2e685d3a. CI Linux 45191130321 và frontend deploy 45191741004 đạt; backend deploy bật chẩn đoán 45194051848 đạt. Backend healthy/restarts=0, admin 200, TLS/OTA/WSS smoke PASS. YAML ngoài audio_diagnostics không đổi, giữ Gipformer và silence=200 ms. Hai lỗi pipeline (fi, owner config) cùng rollback đã ghi BUG_LOG; chi tiết backup/hash/handoff ở AUDIO_DIAGNOSTICS.md. Chưa nghiệm thu mic/loa và nhiều robot thật.
+
 # 2026-11-23 — PR #271, chỉ thay đổi cục bộ
 
 Đã tích hợp bộ lọc ASR/VAD trên feat/vad-noise-filter-271; bổ sung bảo vệ tiếng Việt và tương thích cấu hình cũ. Go tests/race/vet/build và frontend tests/build đạt trên Mac; biểu mẫu kiểm tra với API giả lập. Chưa deploy, chưa thay runtime VPS, chưa kiểm chứng Linux/robot thật. Chi tiết: [PR271_INTEGRATION.md](PR271_INTEGRATION.md).
