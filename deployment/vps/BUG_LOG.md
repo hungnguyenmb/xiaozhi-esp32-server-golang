@@ -73,3 +73,7 @@
 ## 2026-11-23 — race phát hiện khi kiểm tra chẩn đoán
 
 Race test toàn chat thất bại ở MCP reinit: waitForMcpInitState đọc trạng thái trong khi finishMcpInit ghi (mcp_reinit_test.go:124/chat.go:589). Không thuộc thay đổi chẩn đoán, chưa sửa. Xem AUDIO_DIAGNOSTICS.md để tiếp tục.
+
+## 2026-11-23 — script bật chẩn đoán thiếu fi
+
+Actions 45191781529 build thành công, bước SSH báo unexpected end of file do if cấu hình thiếu fi. Backend cũ vẫn healthy, SHA binary chưa đổi. Đã bổ sung fi và kiểm tra bash -n trên script trích xuất từ YAML trước chạy lại.

@@ -104,6 +104,7 @@ jobs:
             temporary.replace(path)
             print("Audio diagnostics:", os.environ["AUDIO_DIAGNOSTICS"])
             PYCONFIG
+            fi
             # Backup current working binary
             if [ -f bundle/xiaozhi_server ]; then
               cp bundle/xiaozhi_server bundle/xiaozhi_server.bak
