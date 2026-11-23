@@ -2,9 +2,9 @@
 
 ## Yêu cầu và phạm vi
 
-Người dùng đã yêu cầu lưu đầy đủ để phân tích sau này, thay cho chỉ lưu đoạn VAD hoặc tự xóa sau 24 giờ. Không có lịch tự xóa/ghi đè. Đang triển khai trên feat/full-audio-capture; trạng thái phát hành sẽ cập nhật sau kiểm tra VPS.
+Người dùng đã yêu cầu lưu đầy đủ để phân tích sau này, thay cho chỉ lưu đoạn VAD hoặc tự xóa sau 24 giờ. Không có lịch tự xóa/ghi đè. PR #10 đã merge production f3c804b7, CI Linux 45199001796 thành công. Đã phát hành thành công bằng Actions 45199579444 và bật audio_capture trên VPS.
 
-Bộ ghi lưu **mọi gói âm thanh server nhận được** từ transport và mọi gói gửi thành công xuống robot (TTS/media), trước gate kích hoạt/listen/VAD/ASR ở chat. Có gói mic thì ghi kể cả khi client VoiceStop hoặc TTS đang chạy. Không thể lưu âm thanh mà firmware không thu/không gửi, cũng không khôi phục gói mất trước server. Đây không phải ghi âm mic phần cứng liên tục 24/7. Không đổi ASR/LLM/TTS, firmware, ngưỡng hoặc thuật toán chống vọng.
+Bộ ghi lưu **mọi gói âm thanh server nhận được** từ transport và mọi gói gửi thành công xuống robot (TTS/media), trước gate kích hoạt/listen/VAD/ASR ở chat. Có gói mic thì ghi kể cả khi client VoiceStop hoặc TTS đang chạy. Không thể lưu âm thanh mà firmware không thu/không gửi, cũng không khôi phục gói mất trước server hoặc bị drain/bỏ trong transport trước RecvAudio. Đây không phải ghi âm mic phần cứng liên tục 24/7. Không đổi ASR/LLM/TTS, firmware, ngưỡng hoặc thuật toán chống vọng.
 
 ## Định dạng và vị trí
 
@@ -51,7 +51,17 @@ Nếu format thay đổi giữa kết nối, codec không phải Opus, data hỏ
 - `chat.go`: cập nhật định dạng mic/loa sau hello và cập nhật output config.
 - `cmd/audio-capture-export`: xuất WAV riêng hai hướng, giữ timestamp gốc trong JSONL.
 - `docker/Dockerfile.linux` và deploy-backend.yml: build/cài exporter, tùy chọn capture runtime, bảo toàn owner.
-- Tests: sao chép packet gốc, marker/hướng/format; ghi trước gate VoiceStop, output lỗi không tính đã gửi; queue overflow; writer failure; concurrent close; segment rotation không mất packet; Opus→WAV và timeline/compact; không ghi đè, báo archive bị cắt. Race tests capture/exporter và test chat chọn lọc đạt trên Mac, full chat tests/vet/build cũng đạt. CI Linux và deploy còn chờ.
+- Tests: sao chép packet gốc, marker/hướng/format; ghi trước gate VoiceStop, output lỗi không tính đã gửi; queue overflow; writer failure; concurrent close; segment rotation không mất packet; Opus→WAV và timeline/compact; không ghi đè, báo archive bị cắt. Race tests capture/exporter và test chat chọn lọc đạt trên Mac, full chat tests/vet/build cũng đạt. CI Linux đã qua (45199001796); deploy và kiểm tra file/export VPS đã qua.
 - Script deploy đã qua bash -n/actionlint và giả lập success/health rollback, giữ owner/mode và tất cả YAML ngoài audio_capture.
 
 Sau phát hành: kiểm tra audio_capture enabled, owner config, container healthy, file thực có mic/speaker, thử export WAV từ phiên giả lập có audio tổng hợp. Robot thật cần thử im lặng/nhiễu/loa phát/lời nói; đối chiếu ECHO_DIAGNOSIS_20261123.md. Không chặn tiếng vọng bằng xóa dữ liệu hoặc lọc mọi từ ngắn.
+
+## Kết quả phát hành
+
+- PR #10, production code `f3c804b7`, deploy run [45199579444](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45199579444) thành công.
+- Runtime enabled=true, directory=/app/storage/audio-captures. So sánh YAML với backup mới nhất: mọi nội dung ngoài audio_capture không đổi; audio_diagnostics giữ enabled=true. Owner/mode main_config: 10001:10001/0600.
+- Backend healthy, restart count=0; admin HTTPS 200, verify_tls.py OTA/WSS/HTTP redirect/route protection PASS.
+- Probe synthetic silence (không phải giọng người dùng) tại kết nối `20261123T150140Z-4163951130`: 100 mic packets, 46 speaker packets từ thông báo kích hoạt bình thường, close=true, dropped=0, archive JSONL 37.688 bytes. Mic được ghi dù thiết bị test chưa activated, chứng minh capture đặt trước gate chat.
+- Export bằng utility trong container: probe-mic.wav 16 kHz mono PCM16/6.000 s; probe-speaker.wav 16 kHz mono PCM16/4.686 s (gồm khoảng trước output theo timeline). File giữ trong thư mục kết nối riêng trên VPS, không commit hoặc công khai.
+- SHA256 core: `6807ceaac08192dba7bb53f9740020c138bbe76c4590623771af3505400810ad`; exporter: `223ffc66d6f5213bd37a8bde3abd8e52556fb501963b14828a7e462eb9e5dcf3`.
+- Chưa phân tích âm thanh echo thật sau triển khai. Bước tiếp: người dùng thử robot, ghi thời điểm; lấy thư mục của robot theo header/device, export mic/speaker, đối chiếu timestamps và AUDIO_DIAG. Không nhầm dữ liệu probe với tiếng động phòng thật. Không tự xóa dữ liệu.

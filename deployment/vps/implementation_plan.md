@@ -1,3 +1,7 @@
+# Kết quả lưu âm thanh — 2026-11-23
+
+Đã hoàn tất code, CI, merge và Actions 45199579444 deploy bật capture. File thực trên VPS/export WAV qua probe đạt, giữ cấu hình khác và dịch vụ healthy. Việc còn lại là thu/đối chiếu audio robot thật (FULL_AUDIO_CAPTURE.md); chưa sửa AEC hoặc ngưỡng dựa trên dữ liệu giả lập.
+
 # Lưu đầy đủ âm thanh — 2026-11-23
 
 Người dùng yêu cầu lưu đầy đủ để phân tích sau này, không chỉ sự kiện VAD. Thực hiện trên feat/full-audio-capture: lưu packet Opus mic trước mọi gate của chat và packet output gửi thành công, timestamp/format và marker TTS; writer bất đồng bộ có báo drop/error, chia file và không tự xóa. Thêm công cụ xuất WAV PCM, kiểm thử frame/order/close/error và export. Cấu hình tắt mặc định; phát hành qua Actions production để bật audio_capture theo yêu cầu, giữ các cấu hình khác và owner file. Cập nhật handoff/kết quả thực tế, không đưa audio vào Git. Các nguyên tắc định tuyến/CORE PROTOCOL hiện hữu giữ trong lịch sử phía dưới.
