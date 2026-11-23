@@ -1,3 +1,15 @@
+# Triển khai backend gate — 2026-11-23
+
+Người dùng đã đồng ý sửa backend theo kế hoạch. Nhánh fix/asr-post-playback-gate; giữ firmware. Thực hiện gate auto theo lượt, frame gắn epoch để bỏ queue cũ, guard 300 ms đầu mic chỉ auto-resume sau TTS tự nhiên; keyword abort/detect bỏ guard. Snapshot input/time theo ASR stream trước VAD reset. Tận dụng pacing/generation TTS hiện hữu, không tăng delay gửi TTS vô cớ. Unit/integration/race chọn lọc, CI Linux, bàn giao và phát hành theo Actions sau kiểm tra.
+
+# Phạm vi hiện hành: chỉ xử lý backend — 2026-11-23
+
+Giữ firmware zero-one đang chạy. Đọc mục điều chỉnh ở đầu WAKE_WORD_INTERRUPT_PLAN.md: kiểm tra protocol/pacing/abort, snapshot theo turn và gate auto-resume phía Go; kiểm thử cùng firmware hiện tại. Đề xuất sửa firmware cũ đã hoãn. Chưa code/deploy bản sửa trong lượt cập nhật kế hoạch này.
+
+# Kế hoạch ngắt lời bằng từ khóa — 2026-11-23
+
+Kế hoạch hiện hành: [WAKE_WORD_INTERRUPT_PLAN.md](WAKE_WORD_INTERRUPT_PLAN.md). Chỉ mới lập kế hoạch theo yêu cầu, chưa code/flash/deploy cho thay đổi này. Ưu tiên xác minh đúng firmware đang nạp, snapshot theo turn ở backend, wake word cục bộ trong lúc nói và bảo vệ lúc quay lại auto-listen; tiếp tục giữ audio để đo. Các nguyên tắc/hồ sơ lịch sử phía dưới giữ nguyên.
+
 # Kết quả lưu âm thanh — 2026-11-23
 
 Đã hoàn tất code, CI, merge và Actions 45199579444 deploy bật capture. File thực trên VPS/export WAV qua probe đạt, giữ cấu hình khác và dịch vụ healthy. Việc còn lại là thu/đối chiếu audio robot thật (FULL_AUDIO_CAPTURE.md); chưa sửa AEC hoặc ngưỡng dựa trên dữ liệu giả lập.

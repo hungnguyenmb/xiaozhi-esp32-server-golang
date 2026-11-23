@@ -258,7 +258,7 @@ func GenClientState(pctx context.Context, deviceID string) (*ClientState, error)
 		SystemPrompt:      deviceConfig.SystemPrompt,
 		DeviceConfig:      deviceConfig,
 		OutputAudioFormat: types_audio.AudioFormat{},
-		OpusAudioBuffer:   make(chan []byte, 100),
+		OpusAudioBuffer:   make(chan OpusInputFrame, 100),
 		AsrAudioBuffer: &AsrAudioBuffer{
 			PcmData:          make([]float32, 0),
 			AudioBufferMutex: sync.RWMutex{},
@@ -417,7 +417,7 @@ func (c *ChatManager) audioMessageLoop(ctx context.Context) {
 			log.Debugf("设备 %s 未激活, 跳过音频数据", c.clientState.DeviceID)
 			continue
 		}
-		if c.clientState.GetClientVoiceStop() {
+		if !c.clientState.AudioInput.Starting() && c.clientState.GetClientVoiceStop() {
 			log.Debug("客户端停止说话, 跳过音频数据")
 			continue
 		}

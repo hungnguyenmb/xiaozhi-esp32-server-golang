@@ -139,6 +139,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 
 		// 从第一帧实际数据中获取帧大小和帧时长
 		var frameSize int
+		var inputEpoch uint64
 		var frameDurationMs int
 		var vadNeedGetCount int // VAD需要的帧数，会在第一帧后计算
 
@@ -213,13 +214,32 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					releaseVad("idle_timeout")
 				}
 				continue
-			case opusFrame, ok := <-state.OpusAudioBuffer:
+			case inputFrame, ok := <-state.OpusAudioBuffer:
 				//log.Debugf("processAsrAudio 收到音频数据, len: %d", len(opusFrame))
 				if !ok {
 					log.Debugf("processAsrAudio 音频通道已关闭")
 					return
 				}
 
+				if !state.AudioInput.WaitFrame(ctx, inputFrame.Epoch) {
+					continue
+				}
+				opusFrame := inputFrame.Data
+				if inputEpoch != inputFrame.Epoch {
+					inputEpoch = inputFrame.Epoch
+					releaseVad("listen_epoch_change")
+					state.AsrAudioBuffer.ClearAsrAudioData()
+					audioProcesser, err = audio.GetAudioProcesser(audioFormat.SampleRate, audioFormat.Channels, 20)
+					if err != nil {
+						log.Errorf("ASR_INPUT_GATE decoder reset failed: %v", err)
+						continue
+					}
+					hasTriggeredCancel = true
+					hasLoggedFirstTextExtendedWait = false
+					speakerInterruptTriggered.Store(false)
+					lastSpeakerPeekDoneAt.Store(0)
+					speakerPeekAudioMs = 0
+				}
 				var skipVad bool
 				var haveVoice bool
 				clientHaveVoice := state.GetClientHaveVoice()
@@ -242,6 +262,10 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 				n, err := audioProcesser.DecoderFloat32(opusFrame, pcmFrame)
 				if err != nil {
 					log.Errorf("解码失败: %v", err)
+					continue
+				}
+
+				if inputFrame.Discard {
 					continue
 				}
 
@@ -324,6 +348,11 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					//log.Debugf("isVad, pcmData len: %d, vadPcmData len: %d, haveVoice: %v", len(pcmData), len(vadPcmData), haveVoice)
 				}
 
+				if !state.AudioInput.Allows(inputFrame.Epoch) {
+					releaseVad("stale_listen_epoch")
+					state.AsrAudioBuffer.ClearAsrAudioData()
+					continue
+				}
 				diagnostics.observe(pcmFrame[:n], haveVoice, vadCalled, powerSkipped && !skipVad && needVad, vadProvider, frameDurationMs, effectiveVadProviderName)
 				if haveVoice {
 					hasLoggedFirstTextExtendedWait = false
@@ -377,7 +406,9 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 
 					//vad识别成功, 往asr音频通道里发送数据
 					//log.Infof("vad识别成功, 往asr音频通道里发送数据, len: %d", len(pcmData))
-					state.Asr.AddAudioData(pcmData)
+					if !state.AudioInput.Forward(inputFrame.Epoch, func() { state.Asr.AddAudioData(pcmData) }) {
+						continue
+					}
 
 					// 声纹只接收当前判定为有声的帧，避免将首段前导静音和尾静音送入识别流。
 					if haveVoice &&
@@ -557,6 +588,20 @@ func (a *ASRManager) releaseResource() {
 	}
 }
 
+// A superseded recognition loop must not release a newer stream's resource.
+// Check ownership while holding the same lock that protects the resource slot.
+func (a *ASRManager) releaseInputTurnResource(turn *ASRInputTurn) {
+	a.resourceMu.Lock()
+	defer a.resourceMu.Unlock()
+	if turn != a.clientState.Asr.InputTurn() {
+		return
+	}
+	if a.asrResource != nil {
+		pool.Release(a.asrResource)
+		a.asrResource = nil
+	}
+}
+
 // Cleanup 清理ASR资源（供外部调用）
 func (a *ASRManager) Cleanup() {
 	a.releaseResource()
@@ -570,6 +615,8 @@ func (a *ASRManager) RestartAsrRecognition(ctx context.Context) error {
 		a.session.ResetTurnSpeakerInterrupted()
 	}
 
+	// Invalidate the previous stream's input snapshot before cancelling its loop.
+	state.Asr.BeginInputTurn()
 	// 取消当前ASR上下文
 	state.Asr.CancelWithReason("ASRManager.RestartAsrRecognition: cancel previous ASR context before restart")
 
@@ -640,6 +687,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 	onError func(error),
 ) {
 	state := a.clientState
+	ownedTurn := state.Asr.InputTurn()
 
 	// 启动一个goroutine处理asr结果
 	go func() {
@@ -649,9 +697,16 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				log.Errorf("asr结果处理goroutine panic: %v, stack: %s", r, string(debug.Stack()))
 			}
 			// 无论正常退出还是 panic，都释放资源
-			a.releaseResource()
+			a.releaseInputTurnResource(ownedTurn)
 		}()
 
+		restartRecognition := func() error {
+			err := a.RestartAsrRecognition(ctx)
+			if err == nil {
+				ownedTurn = state.Asr.InputTurn()
+			}
+			return err
+		}
 		//最大空闲 60s
 		var startIdleTime, maxIdleTime int64
 		startIdleTime = time.Now().Unix()
@@ -710,7 +765,13 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 			default:
 			}
 
+			if ownedTurn != state.Asr.InputTurn() {
+				return
+			}
 			result, isRetry, err := state.RetireAsrResult(ctx)
+			if ctx.Err() != nil || ownedTurn != state.Asr.InputTurn() {
+				return
+			}
 			if err != nil {
 				if ctx.Err() != nil || errors.Is(err, context.Canceled) {
 					log.Debugf("处理asr结果失败，ASR已取消: %v", err)
@@ -762,7 +823,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 					a.releaseResource()
 					if isAllowedToRestart() {
 						invalidStatusWaitCount = 0
-						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+						if restartErr := restartRecognition(); restartErr != nil {
 							log.Errorf("ASR可恢复错误后重启识别失败: reason=%s, err=%v", result.RetryReason, restartErr)
 							if onError != nil {
 								onError(restartErr)
@@ -785,10 +846,18 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				}
 			}
 
-			logASRDiagnostic(state.DeviceID, state.SessionID, "result", len([]rune(text)), state.Vad.GetVoiceDurationInSession(), state.GetAsrDuration(), state.Vad.GetIdleDuration())
+			asrFinalTs := time.Now().UnixMilli()
+			inputStats := ownedTurn.Snapshot()
+			if text != "" && !inputStats.Ended {
+				inputStats = ownedTurn.End(state.Vad.GetVoiceDurationInSession(), state.Vad.GetIdleDuration(), asrFinalTs)
+			}
+			elapsedMs := int64(0)
+			if inputStats.Ended && asrFinalTs >= inputStats.EndAtMs {
+				elapsedMs = asrFinalTs - inputStats.EndAtMs
+			}
+			logASRDiagnostic(state.DeviceID, state.SessionID, "result", len([]rune(text)), inputStats.VoiceMs, elapsedMs, inputStats.IdleMs)
 			if text != "" {
-				voiceDurationMs := state.Vad.GetVoiceDurationInSession()
-				asrFinalTs := time.Now().UnixMilli()
+				voiceDurationMs := inputStats.VoiceMs
 				state.MarkAsrFinalTextAt(asrFinalTs)
 				if a.session != nil {
 					a.session.TraceAsrFinalText(ctx, asrFinalTs)
@@ -820,7 +889,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 					if hookErr != nil {
 						log.Warnf("ASR_OUTPUT hook 执行失败: %v", hookErr)
 					}
-					logASRDiagnostic(state.DeviceID, state.SessionID, fmt.Sprintf("hook_stop=%t,error=%t", stop, hookErr != nil), len([]rune(payload.Text)), voiceDurationMs, state.GetAsrDuration(), state.Vad.GetIdleDuration())
+					logASRDiagnostic(state.DeviceID, state.SessionID, fmt.Sprintf("hook_stop=%t,error=%t", stop, hookErr != nil), len([]rune(payload.Text)), voiceDurationMs, elapsedMs, inputStats.IdleMs)
 					text = payload.Text
 					speakerResult = payload.SpeakerResult
 					if stop {
@@ -836,7 +905,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 							return
 						}
 
-						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+						if restartErr := restartRecognition(); restartErr != nil {
 							log.Errorf("ASR_OUTPUT hook 停止流程后重启识别失败: %v", restartErr)
 							if onError != nil {
 								onError(restartErr)
@@ -865,7 +934,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 							startAudioIdle()
 							return
 						}
-						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+						if restartErr := restartRecognition(); restartErr != nil {
 							log.Errorf("丢弃ASR结果后重启识别失败: %v", restartErr)
 							if onError != nil {
 								onError(restartErr)
@@ -941,7 +1010,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 						if !state.IsRealTime() {
 							return
 						}
-						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+						if restartErr := restartRecognition(); restartErr != nil {
 							log.Errorf("realtime媒体控制后重启ASR识别失败: %v", restartErr)
 							if onError != nil {
 								onError(restartErr)
@@ -969,7 +1038,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				}
 
 				// realtime 模式下，重启 ASR 识别（RestartAsrRecognition 会先归还旧资源再获取新资源）
-				if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+				if restartErr := restartRecognition(); restartErr != nil {
 					log.Errorf("重启ASR识别失败: %v", restartErr)
 					if onError != nil {
 						onError(restartErr)
@@ -1050,7 +1119,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 					diffTs := time.Now().Unix() - startIdleTime
 					if startIdleTime > 0 && diffTs <= maxIdleTime {
 						log.Warnf("ASR识别结果为空，尝试重启ASR识别, diff ts: %d", diffTs)
-						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+						if restartErr := restartRecognition(); restartErr != nil {
 							log.Errorf("重启ASR识别失败: %v", restartErr)
 							if onError != nil {
 								onError(restartErr)

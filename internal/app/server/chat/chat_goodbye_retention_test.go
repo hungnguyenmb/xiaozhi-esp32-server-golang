@@ -34,7 +34,7 @@ func newGoodbyeRetentionTestManager(t *testing.T, retainedTTL time.Duration) (*C
 			FrameDuration: 20,
 			Format:        "opus",
 		},
-		OpusAudioBuffer: make(chan []byte, 8),
+		OpusAudioBuffer: make(chan OpusInputFrame, 8),
 		AsrAudioBuffer: &AsrAudioBuffer{
 			PcmData:          make([]float32, 0),
 			AudioBufferMutex: sync.RWMutex{},

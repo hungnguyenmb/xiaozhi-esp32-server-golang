@@ -134,6 +134,18 @@ func NewChatSession(clientState *ClientState, serverTransport *ServerTransport, 
 		opt(s)
 	}
 
+	enabled := !viper.IsSet("chat.asr_input_gate.enabled") || viper.GetBool("chat.asr_input_gate.enabled")
+	guardMs := 300
+	if viper.IsSet("chat.asr_input_gate.post_tts_guard_ms") {
+		guardMs = viper.GetInt("chat.asr_input_gate.post_tts_guard_ms")
+	}
+	if guardMs < 0 {
+		guardMs = 0
+	}
+	if guardMs > 1000 {
+		guardMs = 1000
+	}
+	clientState.AudioInput.Configure(enabled, time.Duration(guardMs)*time.Millisecond)
 	s.asrManager = NewASRManager(clientState, serverTransport)
 	s.asrManager.session = s // 设置 session 引用
 	s.ttsManager = NewTTSManager(clientState, serverTransport, s)
@@ -498,13 +510,11 @@ func (c *ChatSession) HandleAudioMessage(data []byte) bool {
 	if c.isRealtimeAudio() {
 		return c.realtimeAudio != nil && c.realtimeAudio.FeedAudio(data)
 	}
-	select {
-	case c.clientState.OpusAudioBuffer <- data:
-		return true
-	default:
-		log.Warnf("音频缓冲区已满, 丢弃音频数据")
+	reason := c.clientState.AudioInput.Queue(c.clientState.OpusAudioBuffer, data, time.Now())
+	if reason == "settling_start" {
+		log.Infof("ASR_INPUT_GATE settling: device=%s", c.clientState.DeviceID)
 	}
-	return false
+	return reason != "full"
 }
 
 // handleListenMessage 处理监听消息
@@ -781,6 +791,7 @@ func (s *ChatSession) HandleListenDetect(msg *ClientMessage) error {
 	// 先拿“本条 detect 到来前”的命令历史快照，再记录当前 detect，
 	// 这样后续日志里看到的 history 才是上一条命令，而不是当前这条 detect 自己。
 	now := time.Now()
+	s.clientState.AudioInput.Wake(now)
 	prevHistory := s.clientState.GetCommandHistorySnapshot()
 	s.clientState.RecordCommandArrival(CommandTypeDetect, now)
 
@@ -1133,6 +1144,9 @@ func (s *ChatSession) InterruptAndClearTTSQueueWithReason(reason string) {
 // handleAbortMessage 处理中止消息
 func (s *ChatSession) HandleAbortMessage(msg *ClientMessage) error {
 	s.cancelPendingDetectLLM()
+	// Both a local wake word and a physical-button abort are explicit input.
+	s.clientState.AudioInput.Wake(time.Now())
+	log.Infof("ASR_INPUT_GATE explicit_abort: device=%s wake_word=%t", msg.DeviceID, msg.Reason == "wake_word_detected")
 	if s.isRealtimeAudio() {
 		if s.realtimeAudio == nil {
 			return errors.New("realtime 会话尚未启动")
@@ -1253,6 +1267,7 @@ func (s *ChatSession) HandleListenStart(msg *ClientMessage) error {
 		}
 
 		s.clientState.RecordCommandArrival(CommandTypeListenStart, now)
+		s.clientState.AudioInput.BeginListen(msg.Mode, now, s.clientState.OpusAudioBuffer)
 		if shouldInterruptOutputOnListenStart(msg.Mode, s.clientState.IsWelcomePlaying) {
 			// 非欢迎语保护场景下，listen start 代表新一轮监听接管，
 			// 需要主动停止当前 TTS/LLM，避免说和听同时进行。
@@ -1282,6 +1297,8 @@ func (s *ChatSession) HandleListenStart(msg *ClientMessage) error {
 	// auto/manual 模式进入这里时，视为显式开启一轮新的拾音流程：
 	// 更新模式、停止旧输出，然后异步拉起 OnListenStart 做 ASR 初始化。
 	s.clientState.ListenMode = msg.Mode
+	epoch, guarded := s.clientState.AudioInput.BeginListen(msg.Mode, now, s.clientState.OpusAudioBuffer)
+	log.Infof("ASR_INPUT_GATE listen: device=%s epoch=%d guarded=%t mode=%s", msg.DeviceID, epoch, guarded, msg.Mode)
 	log.Infof("设备 %s 拾音模式: %s", msg.DeviceID, msg.Mode)
 	s.StopSpeakingWithReason(true, fmt.Sprintf("HandleListenStart mode=%s", msg.Mode))
 
@@ -1318,6 +1335,7 @@ func (s *ChatSession) HandleListenStop() error {
 }
 
 func (s *ChatSession) OnListenStart(startSeq uint64, shouldStartAudioIdleWindow bool) error {
+	inputEpoch := s.clientState.AudioInput.Epoch()
 	log.Debugf("OnListenStart start")
 	defer log.Debugf("OnListenStart end")
 
@@ -1405,6 +1423,7 @@ func (s *ChatSession) OnListenStart(startSeq uint64, shouldStartAudioIdleWindow 
 		return nil
 	}
 
+	s.clientState.AudioInput.Ready(inputEpoch)
 	s.clientState.SetListenPhase(ListenPhaseListening)
 	if shouldStartAudioIdleWindow {
 		s.clientState.StartAudioIdleWindow(time.Now())
@@ -1476,6 +1495,7 @@ func (s *ChatSession) AddAsrResultToQueueWithOptions(text string, speakerResult 
 		text:          text,
 		speakerResult: speakerResult,
 	}
+	s.clientState.AudioInput.Block()
 	err := s.chatTextQueue.Push(item)
 	if err != nil {
 		log.Warnf("chatTextQueue 已满或已关闭, 丢弃消息")

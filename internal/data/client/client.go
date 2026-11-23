@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sync"
+	"sync/atomic"
 
 	utypes "xiaozhi-esp32-server-golang/internal/domain/config/types"
 	"xiaozhi-esp32-server-golang/internal/domain/llm"
@@ -124,7 +125,8 @@ type ClientState struct {
 	OutputAudioFormat AudioFormat //输出音频格式
 
 	// opus接收的音频数据缓冲区
-	OpusAudioBuffer chan []byte
+	OpusAudioBuffer chan OpusInputFrame
+	AudioInput      AudioInputGate
 
 	// pcm接收的音频数据缓冲区
 	AsrAudioBuffer *AsrAudioBuffer
@@ -139,9 +141,9 @@ type ClientState struct {
 
 	Status string //状态 listening, llmStart, ttsStart
 
-	IsTtsStart        bool //是否tts开始
-	IsWelcomeSpeaking bool //是否已经播放过欢迎语
-	IsWelcomePlaying  bool //是否正在播放欢迎语
+	IsTtsStart        atomic.Bool //是否tts开始
+	IsWelcomeSpeaking bool        //是否已经播放过欢迎语
+	IsWelcomePlaying  bool        //是否正在播放欢迎语
 
 	LastCmdType string
 	LastCmdAt   time.Time
@@ -324,11 +326,11 @@ func (c *ClientState) InitMessages(messages []*schema.Message) error {
 //历史消息相关的方法结束
 
 func (c *ClientState) SetTtsStart(isStart bool) {
-	c.IsTtsStart = isStart
+	c.IsTtsStart.Store(isStart)
 }
 
 func (c *ClientState) GetTtsStart() bool {
-	return c.IsTtsStart
+	return c.IsTtsStart.Load()
 }
 
 func (c *ClientState) GetMaxIdleDuration() int64 {
@@ -663,6 +665,8 @@ func (state *ClientState) OnManualStop() {
 
 func (state *ClientState) OnVoiceSilence() {
 	silenceTs := time.Now().UnixMilli()
+	state.Asr.InputTurn().End(state.Vad.GetVoiceDurationInSession(), state.Vad.GetIdleDuration(), silenceTs)
+	state.AudioInput.Block()
 	log.Debugf("OnVoiceSilence, voiceDuration: %d, voiceDurationInSession: %d", state.Vad.GetVoiceDuration(), state.Vad.GetVoiceDurationInSession())
 	if state.MarkVoiceSilenceAt(silenceTs) && state.OnVoiceSilenceMetricCallback != nil {
 		state.OnVoiceSilenceMetricCallback(state.Ctx, silenceTs)
@@ -700,6 +704,7 @@ type SpeakReadyUDPConfig struct {
 // ClientMessage 表示客户端消息
 type ClientMessage struct {
 	Type           string               `json:"type"`
+	Reason         string               `json:"reason,omitempty"`
 	DeviceID       string               `json:"device_id,omitempty"`
 	SessionID      string               `json:"session_id,omitempty"`
 	Text           string               `json:"text,omitempty"`

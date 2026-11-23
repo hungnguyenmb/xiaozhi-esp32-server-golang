@@ -1137,6 +1137,9 @@ func (t *TTSManager) finishTtsStopWithReason(ctx context.Context, sendTtsStop bo
 
 	sentTtsStop := false
 	if sendTtsStop {
+		if stopErr == nil {
+			t.clientState.AudioInput.PlaybackStopped(time.Now(), true)
+		}
 		if stopErr != nil && t.serverTransport != nil {
 			t.serverTransport.DrainPendingAudio()
 		}
@@ -1182,6 +1185,7 @@ func (t *TTSManager) EnqueueTtsStart(ctx context.Context) {
 }
 
 func (t *TTSManager) EnqueueTtsStartWithReason(ctx context.Context, reason string) {
+	t.clientState.AudioInput.Block()
 	cycleID := t.startTtsMetricCycle()
 	t.registerTTSTurnEndPolicy(ctx, cycleID)
 	reason = normalizeTTSReason(reason)

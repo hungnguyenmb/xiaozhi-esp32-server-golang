@@ -1047,7 +1047,7 @@ func newSpeakRequestTestManager(transportType string) (*ChatManager, *speakReque
 			FrameDuration: data_audio.FrameDuration,
 			Format:        data_audio.Format,
 		},
-		OpusAudioBuffer: make(chan []byte, 8),
+		OpusAudioBuffer: make(chan data_client.OpusInputFrame, 8),
 		AsrAudioBuffer: &data_client.AsrAudioBuffer{
 			PcmData:          make([]float32, 0),
 			AudioBufferMutex: sync.RWMutex{},

@@ -11,4 +11,10 @@
 
 - Ghi âm đầy đủ: đọc `deployment/vps/FULL_AUDIO_CAPTURE.md`. Người dùng cho phép lưu toàn bộ mic/output server nhận/gửi; không tự xóa recordings, không đưa audio/WAV vào Git. Kiểm tra trạng thái bật runtime trong tài liệu; không nhầm packet nhận được với ghi mic phần cứng 24/7.
 
-- Ngày 2026-11-23 đã bật audio_capture trên VPS qua Actions 45199579444, probe packet/WAV đạt. Dữ liệu riêng nằm runtime/storage/audio-captures; không tự xóa/đưa lên Git. Chưa phân tích echo thật sau deploy; xem FULL_AUDIO_CAPTURE.md.
+- Ngày 2026-11-23 đã bật audio_capture trên VPS qua Actions 45199579444, probe packet/WAV đạt. Dữ liệu riêng nằm runtime/storage/audio-captures; không tự xóa/đưa lên Git. Đã có phân tích audio thật và xác nhận false positives sau câu đầu; đọc ECHO_DIAGNOSIS_20261123.md và FULL_AUDIO_CAPTURE.md.
+
+- Kế hoạch ngắt lời bằng keyword cục bộ và sửa auto-listen: `deployment/vps/WAKE_WORD_INTERRUPT_PLAN.md`. Mới lập kế hoạch, chưa code/flash/deploy. Phải xác minh firmware/board đang nạp trước sửa, không mặc định zero-one hay zero-one-3d.
+
+- Quyết định mới: giữ nguyên firmware zero-one, ưu tiên sửa Go backend vì người dùng xác nhận firmware chạy tốt với server Xiaozhi. Phần firmware trong WAKE_WORD_INTERRUPT_PLAN.md đã hoãn; đọc mục điều chỉnh phạm vi ở đầu kế hoạch. Không tự build/flash firmware cho đợt này.
+
+- Backend ASR gate: đọc `deployment/vps/ASR_INPUT_GATE.md`. Đang triển khai theo yêu cầu, giữ firmware; frame có epoch, auto-resume guard và snapshot trước reset. Chưa coi hiệu quả robot thật đã được nghiệm thu; trạng thái phát hành ghi trong tài liệu này.

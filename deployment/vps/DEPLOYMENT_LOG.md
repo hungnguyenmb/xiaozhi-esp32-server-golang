@@ -166,3 +166,7 @@ Bổ sung AUDIO_DIAG, cấu hình tắt mặc định, accessor xác suất TEN/
 ## 2026-11-23 — phát triển lưu toàn bộ audio
 
 Người dùng yêu cầu lưu đầy đủ, không chỉ VAD. Thêm capture Opus theo kết nối tại transport, markers/timestamps, writer async có báo thiếu/lỗi, rotation giữ dữ liệu, free-space guard Linux/macOS, exporter WAV và toggle Actions. Kiểm thử và trạng thái phát hành trong FULL_AUDIO_CAPTURE.md.
+
+## 2026-11-24 — triển khai backend input gate
+
+Code gate auto/epoch/guard, snapshot ASR trước reset và keyword abort giữ firmware. Test local/race chọn lọc đạt; trạng thái CI/phát hành và giới hạn trong ASR_INPUT_GATE.md. Chưa nghiệm thu robot thật ở mục ghi này.
