@@ -820,7 +820,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 
 				switch result.RetryReason {
 				case asr_types.RetryReasonDoubaoResponseCode45000081, asr_types.RetryReasonXunfeiServiceInstanceInvalid, asr_types.RetryReasonAliyunQwen3ConnectionClosed:
-					a.releaseResource()
+					a.releaseInputTurnResource(ownedTurn)
 					if isAllowedToRestart() {
 						invalidStatusWaitCount = 0
 						if restartErr := restartRecognition(); restartErr != nil {
@@ -879,6 +879,9 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 
 				// 获取暂存的声纹结果（带超时）
 				speakerResult := a.getSpeakerResult()
+				if ctx.Err() != nil || ownedTurn != state.Asr.InputTurn() {
+					return
+				}
 				speakerInterrupted := false
 				if a.session != nil {
 					speakerInterrupted = a.session.ConsumeTurnSpeakerInterrupted()
@@ -963,6 +966,9 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 					}
 				}
 
+				if ctx.Err() != nil || ownedTurn != state.Asr.InputTurn() {
+					return
+				}
 				// 创建用户消息，使用 hook 改写后的文本进入后续副作用链
 				userMsg := &schema.Message{
 					Role:    schema.User,
@@ -1023,7 +1029,7 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				}
 
 				// 添加到队列（迁移到 ASRManager 中处理）
-				if err := a.addAsrResultToQueue(text, speakerResult); err != nil {
+				if err := a.addAsrResultToQueue(ctx, ownedTurn, text, speakerResult); err != nil {
 					log.Errorf("开始对话失败: %v", err)
 					if onError != nil {
 						onError(err)
@@ -1211,9 +1217,9 @@ func (a *ASRManager) getSpeakerResult() *speaker.IdentifyResult {
 }
 
 // addAsrResultToQueue 添加ASR结果到队列（迁移到 ASRManager 中处理）
-func (a *ASRManager) addAsrResultToQueue(text string, speakerResult *speaker.IdentifyResult) error {
+func (a *ASRManager) addAsrResultToQueue(ctx context.Context, turn *ASRInputTurn, text string, speakerResult *speaker.IdentifyResult) error {
 	if a.session == nil {
 		return fmt.Errorf("session is nil")
 	}
-	return a.session.AddAsrResultToQueue(text, speakerResult)
+	return a.session.AddAsrResultToQueueWithOptions(text, speakerResult, llmResponseChannelOptions{asrSourceCtx: ctx, asrInputTurn: turn})
 }

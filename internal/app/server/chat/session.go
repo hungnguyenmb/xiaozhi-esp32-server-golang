@@ -1297,10 +1297,10 @@ func (s *ChatSession) HandleListenStart(msg *ClientMessage) error {
 	// auto/manual 模式进入这里时，视为显式开启一轮新的拾音流程：
 	// 更新模式、停止旧输出，然后异步拉起 OnListenStart 做 ASR 初始化。
 	s.clientState.ListenMode = msg.Mode
-	epoch, guarded := s.clientState.AudioInput.BeginListen(msg.Mode, now, s.clientState.OpusAudioBuffer)
-	log.Infof("ASR_INPUT_GATE listen: device=%s epoch=%d guarded=%t mode=%s", msg.DeviceID, epoch, guarded, msg.Mode)
 	log.Infof("设备 %s 拾音模式: %s", msg.DeviceID, msg.Mode)
 	s.StopSpeakingWithReason(true, fmt.Sprintf("HandleListenStart mode=%s", msg.Mode))
+	epoch, guarded := s.clientState.AudioInput.BeginListen(msg.Mode, time.Now(), s.clientState.OpusAudioBuffer)
+	log.Infof("ASR_INPUT_GATE listen: device=%s epoch=%d guarded=%t mode=%s", msg.DeviceID, epoch, guarded, msg.Mode)
 
 	startSeq := s.beginListenStart()
 	go func() {
@@ -1478,9 +1478,17 @@ func (s *ChatSession) AddAsrResultToQueueWithOptions(text string, speakerResult 
 		log.Debugf("AddAsrResultToQueue 正在执行 StopSpeaking，丢弃消息")
 		return nil
 	}
-	s.stopSpeakingMu.Unlock()
-
-	sessionCtx := s.clientState.SessionCtx.Get(s.clientState.Ctx)
+	defer s.stopSpeakingMu.Unlock()
+	if options.asrSourceCtx != nil && options.asrSourceCtx.Err() != nil {
+		return nil
+	}
+	if options.asrInputTurn != nil && options.asrInputTurn != s.clientState.Asr.InputTurn() {
+		return nil
+	}
+	sessionCtx := options.asrSourceCtx
+	if sessionCtx == nil {
+		sessionCtx = s.clientState.SessionCtx.Get(s.clientState.Ctx)
+	}
 	// 检查 sessionCtx 是否已取消
 	if sessionCtx.Err() != nil {
 		log.Debugf("AddAsrResultToQueue sessionCtx 已取消，丢弃消息")
