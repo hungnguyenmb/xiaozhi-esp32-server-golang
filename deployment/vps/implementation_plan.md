@@ -1,3 +1,26 @@
+# Phát hành PR271 và chẩn đoán — 2026-11-23
+
+Người dùng yêu cầu deploy VPS. Commit/push nhánh, chạy CI Linux trước merge production; deploy frontend/backend qua Actions. Dispatch backend với audio_diagnostics=enabled để cập nhật chọn lọc cấu hình và bật log, giữ Gipformer/LLM/TTS/ngưỡng hiện hữu. Xác minh container, HTTPS và log/setup; chưa coi robot thật đã nghiệm thu. Ghi lại commit/run và rollback trong AUDIO_DIAGNOSTICS.md.
+
+# Chẩn đoán âm thanh — 2026-11-23
+
+Phạm vi: thêm log bật/tắt tại chat.audio_diagnostics, tổng hợp RMS/peak/VAD theo thời gian, sự kiện kết thúc câu và kết quả ASR không chứa transcript. Không lưu audio, không tự đổi ngưỡng, không deploy. Đọc hướng dẫn AUDIO_DIAGNOSTICS.md để tiếp tục. Kiểm chứng: test thống kê và các package VAD/chat/hooks, build/vet theo môi trường native đã ghi trong PR271_INTEGRATION.md.
+
+# Công việc hiện tại — tích hợp PR #271, 2026-11-23
+
+Nhánh: feat/vad-noise-filter-271, từ production a883cca5. Người dùng đồng ý tích hợp #271 và yêu cầu tiếp tục; chưa merge production hoặc deploy VPS.
+
+1. Đưa thay đổi của 4 commit upstream e8a1a917/638224b1/3222664d/bdd5be37 (head bdd5be37ef0e2e5dc6d3fe2ed5480b829631ed22) vào nhánh thử, giữ lịch sử nguồn trong tài liệu.
+2. Giải quyết 3 giao diện ConfigWizard/VADConfig/VADConfigForm, giữ tiếng Việt và thêm threshold_low/validation tương ứng, không thay ID/provider/model.
+3. Kiểm tra filter punctuation/filler, bảo vệ câu ngắn tiếng Việt; không tự chặn mọi từ đệm có thể là câu trả lời hợp lệ. Kiểm tra hook bỏ kết quả vẫn nhận câu kế tiếp.
+4. Kiểm tra VAD hysteresis, reset và tài nguyên giữa phiên; giữ tương thích cấu hình chỉ có threshold. Không tự đổi ngưỡng runtime hoặc ASR Gipformer đang phục vụ.
+5. Chạy Go tests/vet cho phần thay đổi, frontend tests/build, rà soát diff và chữ Trung mới. Nếu giới hạn CGO/thư viện native cản full build, ghi rõ và bổ sung kiểm tra Linux qua CI khi phù hợp.
+6. Cập nhật hướng dẫn, task/log và phần chưa kiểm chứng. Deploy sau này qua GitHub Actions, chỉ từ production. Không thay firmware, LLM/TTS, secrets hoặc dữ liệu người dùng.
+
+Kết quả: đã hoàn tất triển khai và kiểm tra cục bộ; CI Linux và robot thật còn chờ. Chi tiết bàn giao: [PR271_INTEGRATION.md](PR271_INTEGRATION.md).
+
+---
+
 # Công việc hiện tại — PhoWhisper ASR, 2026-11-22
 
 Kế hoạch triển khai và checklist bàn giao: [PHOWHISPER_PLAN.md](PHOWHISPER_PLAN.md).

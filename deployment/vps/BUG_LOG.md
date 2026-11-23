@@ -1,3 +1,10 @@
+# 2026-11-23 — Rà soát tương thích khi tích hợp #271
+
+- Default threshold_low cố định có thể làm cấu hình Silero cũ đổi ngưỡng: bỏ default cố định, fallback theo threshold; thêm test.
+- Form sửa cấu hình cũ có thể tự thêm ngưỡng thấp khác threshold: dùng helper merge chung cho VADConfig/wizard; test cả low=0.
+- Reset hysteresis chưa xóa lịch sử native TEN: tạo lại native handle khi trả pool; test so sánh instance mới và không mở lại handle đã đóng.
+- Bộ lọc từ ngắn cần giữ câu trả lời tiếng Việt: thêm keep phrases và giới hạn filler Latin theo thời lượng; test hook vẫn cho câu tiếp theo đi qua.
+
 # Ghi chú triển khai
 
 ## 2026-11-21: Nginx không dựng được map token
@@ -62,3 +69,7 @@
 ## PhoWhisper trial public probe — 2026-11-23
 
 - Run 45092837122 đã cài sidecar, health/speech/silence/TLS/OTA/WSS đều qua trong helper; bước curl cuối báo đỏ do GET OTA thiếu Device-Id nhận 400. Sửa probe thành POST JSON kèm Device-Id/Client-Id smoke test sẵn có. Không sửa API hoặc bỏ kiểm tra trạng thái.
+
+## 2026-11-23 — race phát hiện khi kiểm tra chẩn đoán
+
+Race test toàn chat thất bại ở MCP reinit: waitForMcpInitState đọc trạng thái trong khi finishMcpInit ghi (mcp_reinit_test.go:124/chat.go:589). Không thuộc thay đổi chẩn đoán, chưa sửa. Xem AUDIO_DIAGNOSTICS.md để tiếp tục.

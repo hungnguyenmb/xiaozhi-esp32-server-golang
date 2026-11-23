@@ -1,3 +1,7 @@
+# 2026-11-23 — PR #271, chỉ thay đổi cục bộ
+
+Đã tích hợp bộ lọc ASR/VAD trên feat/vad-noise-filter-271; bổ sung bảo vệ tiếng Việt và tương thích cấu hình cũ. Go tests/race/vet/build và frontend tests/build đạt trên Mac; biểu mẫu kiểm tra với API giả lập. Chưa deploy, chưa thay runtime VPS, chưa kiểm chứng Linux/robot thật. Chi tiết: [PR271_INTEGRATION.md](PR271_INTEGRATION.md).
+
 # Nhật ký triển khai 2026-11-21
 
 ## VPS 194.233.73.211
@@ -146,3 +150,7 @@ Xem BUG_LOG.md để biết hạn chế của công cụ test upstream với c�
 - Bộ 30 speech FLEURS CC BY 4.0 +20 nonspeech tổng hợp: Gipformer WER 4,07%, base 10,49%, small 7,07%. p95 tải đơn 50 mẫu lần lượt khoảng 0,28–0,31 / 3,53 / 5,91 giây. Small tải đồng thời được chủ động dừng sau tải đơn không đạt.
 - User chọn giữ Gipformer; ASR mặc định xác minh vps_asr, chưa từng chạy activate. Sidecar small healthy nhưng không làm mặc định. Dừng đúng benchmark client để trả CPU, giữ backend/ASR/TTS.
 - Chi tiết số đo/nguồn/giới hạn/run URL: PHOWHISPER_EVALUATION_20261123.md.
+
+## 2026-11-23 — thêm chẩn đoán cục bộ, không deploy
+
+Bổ sung AUDIO_DIAG, cấu hình tắt mặc định, accessor xác suất TEN/Silero và unit tests. Không thay threshold/ASR/LLM/TTS. Bàn giao và cách bật/đọc: AUDIO_DIAGNOSTICS.md.

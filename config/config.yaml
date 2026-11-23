@@ -11,6 +11,9 @@ auth:
 
 # 聊天配置
 chat:
+  audio_diagnostics:
+    enabled: false # Temporary metadata-only diagnostics, no audio/transcripts
+    interval_ms: 1000 # Clamped to 500..10000; restart backend to apply
   max_idle_duration: 30000         # 会话最大空闲时间（毫秒），0 表示不限制
   chat_max_silence_duration: 400   # 句子结束静音阈值（毫秒），默认 400
   speak_request_reuse_window_ms: 60000 # MQTT-UDP 主动播报链路复用窗口（毫秒）
@@ -24,6 +27,12 @@ chat_hooks:
     drop_when_full: false
     timeout_ms: 200
   plugins:
+    asr_noise_filter:
+      enabled: true
+      priority: 10
+      min_voice_duration_ms: 300
+      drop_phrases: ["嗯", "嗯嗯", "啊", "啊啊", "呃", "额", "唔", "哦", "噢", "标点符号", "标识符号", "句号", "逗号"]
+      keep_phrases: ["bật", "tắt", "dừng", "tiếp", "im", "vâng", "dạ", "có", "không", "đúng", "sai", "ừ", "ờ", "à", "ạ", "ơi", "好", "对", "是", "停", "开", "关", "不"]
     statistic_plugin:
       enabled: true
       priority: 100
@@ -122,6 +131,7 @@ vad:
   silero_vad:
     model_path: "config/models/vad/silero_vad.onnx"  # 模型文件路径
     threshold: 0.5                    # 检测阈值
+    threshold_low: 0.35               # 退出语音阈值，低于该值切换为静音；介于 threshold_low 和 threshold 之间保持上一状态
     min_silence_duration_ms: 100      # 最小静默时间（毫秒）
     sample_rate: 16000                # 采样率
     channels: 1                       # 声道数
@@ -131,6 +141,7 @@ vad:
   ten_vad:
     hop_size: 512                     # 帧移大小
     threshold: 0.4                    # VAD检测阈值
+    threshold_low: 0.25               # 退出语音阈值，低于该值切换为静音；介于 threshold_low 和 threshold 之间保持上一状态
     pool_size: 10                     # 资源池大小
     acquire_timeout_ms: 3000          # 获取超时时间（毫秒）
 

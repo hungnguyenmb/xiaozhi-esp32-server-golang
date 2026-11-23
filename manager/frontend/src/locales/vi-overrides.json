@@ -169,5 +169,11 @@
   "超时": "Hết thời gian chờ",
   "未收到响应或调用失败": "Không nhận được phản hồi hoặc gọi dịch vụ không thành công",
   "未收到有效音频或合成失败": "Không nhận được âm thanh hợp lệ hoặc tổng hợp không thành công",
-  "配置格式无效": "Định dạng cấu hình không hợp lệ"
+  "配置格式无效": "Định dạng cấu hình không hợp lệ",
+  "进入阈值": "Ngưỡng bắt đầu nói",
+  "退出阈值": "Ngưỡng kết thúc nói",
+  "请输入进入阈值": "Vui lòng nhập ngưỡng bắt đầu nói",
+  "请输入退出阈值": "Vui lòng nhập ngưỡng kết thúc nói",
+  "退出阈值不能高于进入阈值": "Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu",
+  "推荐值：0.2": "Giá trị đề xuất: 0,2"
 }

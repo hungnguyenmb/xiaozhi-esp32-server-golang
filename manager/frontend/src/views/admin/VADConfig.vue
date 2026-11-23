@@ -109,6 +109,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import api from '../../utils/api'
+import { mergeVadConfig } from '../../utils/vad'
 import { testSingleConfig, testWithData, parseJsonData } from '../../utils/configTest'
 import VADConfigForm from './forms/VADConfigForm.vue'
 import { resolveVADProvider } from './forms/configProviderUtils'
@@ -140,6 +141,7 @@ const form = reactive({
   silero_vad: {
     model_path: 'config/models/vad/silero_vad.onnx',
     threshold: 0.5,
+    threshold_low: 0.35,
     min_silence_duration_ms: 100,
     sample_rate: 16000,
     channels: 1,
@@ -148,10 +150,27 @@ const form = reactive({
   ten_vad: {
     hop_size: 320,
     threshold: 0.3,
+    threshold_low: 0.2,
     pool_size: 10,
     acquire_timeout_ms: 3000
   }
 })
+
+const validateSileroThresholdLow = (rule, value, callback) => {
+  if (Number(value) > Number(form.silero_vad.threshold)) {
+    callback(new Error('Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu'))
+    return
+  }
+  callback()
+}
+
+const validateTenThresholdLow = (rule, value, callback) => {
+  if (Number(value) > Number(form.ten_vad.threshold)) {
+    callback(new Error('Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu'))
+    return
+  }
+  callback()
+}
 
 const rules = {
   name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
@@ -163,13 +182,21 @@ const rules = {
   'webrtc_vad.vad_sample_rate': [{ required: true, message: 'Vui lòng chọn tốc độ lấy mẫu VAD', trigger: 'change' }],
   'webrtc_vad.vad_mode': [{ required: true, message: 'Vui lòng chọn chế độ VAD', trigger: 'change' }],
   'silero_vad.model_path': [{ required: true, message: 'Vui lòng nhập đường dẫn model', trigger: 'blur' }],
-  'silero_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng', trigger: 'blur' }],
+  'silero_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng bắt đầu nói', trigger: 'blur' }],
+  'silero_vad.threshold_low': [
+    { required: true, message: 'Vui lòng nhập ngưỡng kết thúc nói', trigger: 'blur' },
+    { validator: validateSileroThresholdLow, trigger: 'blur' }
+  ],
   'silero_vad.min_silence_duration_ms': [{ required: true, message: 'Vui lòng nhập khoảng thời gian im lặng tối thiểu', trigger: 'blur' }],
   'silero_vad.sample_rate': [{ required: true, message: 'Vui lòng chọn tốc độ lấy mẫu', trigger: 'change' }],
   'silero_vad.channels': [{ required: true, message: 'Vui lòng chọn số kênh', trigger: 'change' }],
   'silero_vad.acquire_timeout_ms': [{ required: true, message: 'Vui lòng nhập thời gian chờ thu thập', trigger: 'blur' }],
   'ten_vad.hop_size': [{ required: true, message: 'Vui lòng nhập kích thước dịch chuyển khung', trigger: 'blur' }],
-  'ten_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng phát hiện VAD', trigger: 'blur' }],
+  'ten_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng bắt đầu nói', trigger: 'blur' }],
+  'ten_vad.threshold_low': [
+    { required: true, message: 'Vui lòng nhập ngưỡng kết thúc nói', trigger: 'blur' },
+    { validator: validateTenThresholdLow, trigger: 'blur' }
+  ],
   'ten_vad.pool_size': [{ required: true, message: 'Vui lòng nhập kích thước nhóm kết nối', trigger: 'blur' }],
   'ten_vad.acquire_timeout_ms': [{ required: true, message: 'Vui lòng nhập thời gian chờ thu thập', trigger: 'blur' }]
 }
@@ -209,16 +236,16 @@ const editConfig = (config) => {
     if (configObj.webrtc_vad) {
       form.webrtc_vad = { ...form.webrtc_vad, ...configObj.webrtc_vad }
     } else if (configObj.silero_vad) {
-      form.silero_vad = { ...form.silero_vad, ...configObj.silero_vad }
+      form.silero_vad = mergeVadConfig(form.silero_vad, configObj.silero_vad)
     } else if (configObj.ten_vad) {
-      form.ten_vad = { ...form.ten_vad, ...configObj.ten_vad }
+      form.ten_vad = mergeVadConfig(form.ten_vad, configObj.ten_vad)
     } else {
       if (config.provider === 'webrtc_vad') {
         form.webrtc_vad = { ...form.webrtc_vad, ...configObj }
       } else if (config.provider === 'silero_vad') {
-        form.silero_vad = { ...form.silero_vad, ...configObj }
+        form.silero_vad = mergeVadConfig(form.silero_vad, configObj)
       } else if (config.provider === 'ten_vad') {
-        form.ten_vad = { ...form.ten_vad, ...configObj }
+        form.ten_vad = mergeVadConfig(form.ten_vad, configObj)
       }
     }
   } catch (error) {
@@ -437,6 +464,7 @@ const resetForm = () => {
     silero_vad: {
       model_path: 'config/models/vad/silero_vad.onnx',
       threshold: 0.5,
+      threshold_low: 0.35,
       min_silence_duration_ms: 100,
       sample_rate: 16000,
       channels: 1,
@@ -445,6 +473,7 @@ const resetForm = () => {
     ten_vad: {
       hop_size: 320,
       threshold: 0.3,
+      threshold_low: 0.2,
       pool_size: 10,
       acquire_timeout_ms: 3000
     }

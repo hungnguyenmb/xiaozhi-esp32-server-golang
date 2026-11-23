@@ -159,6 +159,7 @@ import { ElMessage } from 'element-plus'
 import { CopyDocument } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/utils/api'
+import { mergeVadConfig } from '@/utils/vad'
 import { testWithData, parseJsonData } from '@/utils/configTest'
 import VADConfigForm from './forms/VADConfigForm.vue'
 import ASRConfigForm from './forms/ASRConfigForm.vue'
@@ -204,6 +205,7 @@ const vadForm = reactive({
   silero_vad: {
     model_path: 'config/models/vad/silero_vad.onnx',
     threshold: 0.5,
+    threshold_low: 0.35,
     min_silence_duration_ms: 100,
     sample_rate: 16000,
     channels: 1,
@@ -212,23 +214,48 @@ const vadForm = reactive({
   ten_vad: {
     hop_size: 320,
     threshold: 0.3,
+    threshold_low: 0.2,
     pool_size: 10,
     acquire_timeout_ms: 3000
   }
 })
 const vadFormRef = ref()
+const validateSileroThresholdLow = (rule, value, callback) => {
+  if (Number(value) > Number(vadForm.silero_vad.threshold)) {
+    callback(new Error('Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu'))
+    return
+  }
+  callback()
+}
+
+const validateTenThresholdLow = (rule, value, callback) => {
+  if (Number(value) > Number(vadForm.ten_vad.threshold)) {
+    callback(new Error('Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu'))
+    return
+  }
+  callback()
+}
+
 const vadFormRules = {
   name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
   config_id: [{ required: true, message: 'Vui lòng nhập ID cấu hình', trigger: 'blur' }],
   provider: [{ required: true, message: '请选择提供商', trigger: 'change' }],
   'silero_vad.model_path': [{ required: true, message: 'Vui lòng nhập đường dẫn model', trigger: 'blur' }],
-  'silero_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng', trigger: 'blur' }],
+  'silero_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng bắt đầu nói', trigger: 'blur' }],
+  'silero_vad.threshold_low': [
+    { required: true, message: 'Vui lòng nhập ngưỡng kết thúc nói', trigger: 'blur' },
+    { validator: validateSileroThresholdLow, trigger: 'blur' }
+  ],
   'silero_vad.min_silence_duration_ms': [{ required: true, message: 'Vui lòng nhập khoảng thời gian im lặng tối thiểu', trigger: 'blur' }],
   'silero_vad.sample_rate': [{ required: true, message: 'Vui lòng chọn tốc độ lấy mẫu', trigger: 'change' }],
   'silero_vad.channels': [{ required: true, message: 'Vui lòng chọn số kênh', trigger: 'change' }],
   'silero_vad.acquire_timeout_ms': [{ required: true, message: 'Vui lòng nhập thời gian chờ thu thập', trigger: 'blur' }],
   'ten_vad.hop_size': [{ required: true, message: 'Vui lòng nhập kích thước dịch chuyển khung', trigger: 'blur' }],
-  'ten_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng phát hiện VAD', trigger: 'blur' }],
+  'ten_vad.threshold': [{ required: true, message: 'Vui lòng nhập ngưỡng bắt đầu nói', trigger: 'blur' }],
+  'ten_vad.threshold_low': [
+    { required: true, message: 'Vui lòng nhập ngưỡng kết thúc nói', trigger: 'blur' },
+    { validator: validateTenThresholdLow, trigger: 'blur' }
+  ],
   'ten_vad.pool_size': [{ required: true, message: 'Vui lòng nhập kích thước nhóm kết nối', trigger: 'blur' }],
   'ten_vad.acquire_timeout_ms': [{ required: true, message: 'Vui lòng nhập thời gian chờ thu thập', trigger: 'blur' }]
 }
@@ -910,9 +937,9 @@ async function loadVadIfExists() {
     if (provider === 'webrtc_vad') {
       Object.assign(vadForm.webrtc_vad, data.webrtc_vad || data)
     } else if (provider === 'silero_vad') {
-      Object.assign(vadForm.silero_vad, data.silero_vad || data)
+      Object.assign(vadForm.silero_vad, mergeVadConfig(vadForm.silero_vad, data.silero_vad || data))
     } else {
-      Object.assign(vadForm.ten_vad, data.ten_vad || data)
+      Object.assign(vadForm.ten_vad, mergeVadConfig(vadForm.ten_vad, data.ten_vad || data))
     }
   } catch (_) {}
 }

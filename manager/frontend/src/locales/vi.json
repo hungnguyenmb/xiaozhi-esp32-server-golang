@@ -1841,5 +1841,11 @@
   "复制成功": "Đã sao chép",
   "暂无数据": "Chưa có dữ liệu",
   "加载中...": "Đang tải...",
-  "待激活": "Chờ kích hoạt"
+  "待激活": "Chờ kích hoạt",
+  "进入阈值": "Ngưỡng bắt đầu nói",
+  "退出阈值": "Ngưỡng kết thúc nói",
+  "请输入进入阈值": "Vui lòng nhập ngưỡng bắt đầu nói",
+  "请输入退出阈值": "Vui lòng nhập ngưỡng kết thúc nói",
+  "退出阈值不能高于进入阈值": "Ngưỡng kết thúc không được lớn hơn ngưỡng bắt đầu",
+  "推荐值：0.2": "Giá trị đề xuất: 0,2"
 }
