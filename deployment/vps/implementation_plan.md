@@ -1,3 +1,7 @@
+# Kết quả backend-only ASR gate — 2026-11-24
+
+Đã triển khai theo phạm vi giữ firmware, CI Linux đạt và Actions 45226377103 deploy bật gate/300 ms. Backend healthy, config khác giữ nguyên, HTTPS/OTA/WSS và archive probe đạt. Còn nghiệm thu robot thật; đọc ASR_INPUT_GATE.md trước tiếp tục. Không khẳng định guard loại mọi tiếng động hoặc thay thế AEC.
+
 # Triển khai backend gate — 2026-11-23
 
 Người dùng đã đồng ý sửa backend theo kế hoạch. Nhánh fix/asr-post-playback-gate; giữ firmware. Thực hiện gate auto theo lượt, frame gắn epoch để bỏ queue cũ, guard 300 ms đầu mic chỉ auto-resume sau TTS tự nhiên; keyword abort/detect bỏ guard. Snapshot input/time theo ASR stream trước VAD reset. Tận dụng pacing/generation TTS hiện hữu, không tăng delay gửi TTS vô cớ. Unit/integration/race chọn lọc, CI Linux, bàn giao và phát hành theo Actions sau kiểm tra.

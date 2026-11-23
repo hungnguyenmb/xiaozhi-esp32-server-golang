@@ -1,3 +1,13 @@
+# Trạng thái ASR input gate — 2026-11-24
+
+- [x] Code gate/epoch/guard/snapshot và ưu tiên abort, giữ firmware.
+- [x] Test local/full chat, race chọn lọc, vet theo phạm vi ghi rõ, CI Linux đạt.
+- [x] Bổ sung empty retry trước phát hành; PR14/15 merge production.
+- [x] Actions 45226377103 deploy và bật guard 300 ms; config/health/TLS/OTA/WSS/capture qua probe.
+- [ ] Robot thật: một câu rồi im lặng, keyword ngắt lời, câu ngắn/nói ngay sau TTS; xác nhận không cắt đầu câu và đo false positives.
+
+Bàn giao: ASR_INPUT_GATE.md. Các mục phía dưới là lịch sử.
+
 # Trạng thái lưu toàn bộ audio — 2026-11-23
 
 - [x] Capture mic/output trước gate chat, archive/timestamps, exporter WAV và tests.
