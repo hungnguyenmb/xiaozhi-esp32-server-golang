@@ -58,3 +58,7 @@
 - Run 45084209503: Docker COPY không thấy requirements/bridge vì deployment/vps/.dockerignore cũ chỉ cho phép bundle backend. Thêm Dockerfile.phowhisper.dockerignore với allowlist 4 file đúng image mới, không mở rộng context để đưa runtime secrets/model cache vào image.
 
 - Sau merge PR #1: CI production run 45084561511 bị cancelled vì khóa chung đặt ở cấp toàn workflow; GitHub chỉ giữ một lượt pending cho một concurrency group. Chuyển khóa chung xuống job deploy của ASR, tách nhóm CI theo ref/event. Backend và thao tác ASR trên VPS vẫn tuần tự.
+
+## PhoWhisper trial public probe — 2026-11-23
+
+- Run 45092837122 đã cài sidecar, health/speech/silence/TLS/OTA/WSS đều qua trong helper; bước curl cuối báo đỏ do GET OTA thiếu Device-Id nhận 400. Sửa probe thành POST JSON kèm Device-Id/Client-Id smoke test sẵn có. Không sửa API hoặc bỏ kiểm tra trạng thái.

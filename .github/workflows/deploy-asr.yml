@@ -181,4 +181,6 @@ jobs:
       - name: Verify public services
         run: |
           curl --fail --retry 3 https://adminzeroone.hungnguyenaistem.online/ -o /dev/null
-          curl --fail --retry 3 https://otazeroone.hungnguyenaistem.online/xiaozhi/ota/ -o /dev/null
+          curl --fail --retry 3 https://otazeroone.hungnguyenaistem.online/xiaozhi/ota/ \
+            -H 'Content-Type: application/json' -H 'Device-Id: 02:00:00:00:00:01' \
+            -H 'Client-Id: codex-smoke-test' --data '{}' -o /dev/null
