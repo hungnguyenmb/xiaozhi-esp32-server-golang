@@ -1,0 +1,67 @@
+name: VAD and ASR noise filter CI
+
+on:
+  push:
+    branches: [feat/vad-noise-filter-271]
+  pull_request:
+    paths:
+      - 'internal/app/server/chat/**'
+      - 'internal/domain/chat/hooks/**'
+      - 'internal/domain/vad/**'
+      - 'manager/frontend/**'
+      - '.github/workflows/ci-vad-noise-filter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vad-ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.11'
+          cache: true
+      - name: Prepare native VAD and ONNX dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libopus-dev libc++-dev libc++abi-dev
+          tar -xzf docker/lib/onnxruntime-linux-x64-1.21.0.tgz -C "$RUNNER_TEMP"
+          echo "CGO_CFLAGS=-I$RUNNER_TEMP/onnxruntime-linux-x64-1.21.0/include" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L$RUNNER_TEMP/onnxruntime-linux-x64-1.21.0/lib" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$RUNNER_TEMP/onnxruntime-linux-x64-1.21.0/lib:$GITHUB_WORKSPACE/lib/ten-vad/lib/Linux/x64" >> "$GITHUB_ENV"
+      - name: Test affected packages on Linux with native TEN VAD
+        run: |
+          go test -tags nolibopusfile -count=1 ./internal/domain/vad/hysteresis ./internal/domain/vad/power ./internal/domain/vad/ten_vad ./internal/domain/vad/silero_vad ./internal/domain/chat/hooks ./internal/app/server/chat
+          go test -race -tags nolibopusfile -count=1 -run TestAudioDiagnostics ./internal/app/server/chat
+          go test -race -tags nolibopusfile -count=1 ./internal/domain/chat/hooks ./internal/domain/vad/hysteresis ./internal/domain/vad/ten_vad
+      - name: Vet and build server
+        run: |
+          go vet -tags nolibopusfile ./cmd/server ./internal/domain/vad/hysteresis ./internal/domain/vad/power ./internal/domain/vad/ten_vad ./internal/domain/vad/silero_vad ./internal/domain/chat/hooks ./internal/app/server/chat
+          go build -tags nolibopusfile -o "$RUNNER_TEMP/xiaozhi-vad-check" ./cmd/server
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: manager/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: manager/frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

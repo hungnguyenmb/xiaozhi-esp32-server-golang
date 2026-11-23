@@ -1,3 +1,14 @@
+# PR #271 — 2026-11-23
+
+- [x] Tích hợp upstream trên nhánh thử; giữ tiếng Việt và Gipformer.
+- [x] Bảo vệ câu ngắn tiếng Việt, tương thích ngưỡng cũ, reset native TEN.
+- [x] Go tests/race/vet/build; frontend 10 tests/build; biểu mẫu qua API giả lập.
+- [x] Thêm CI Linux và tài liệu [PR271_INTEGRATION.md](PR271_INTEGRATION.md).
+- [ ] Commit/push và CI Linux thực tế.
+- [ ] Review/merge, deploy qua Actions, thử robot thật và nhiều thiết bị.
+
+---
+
 # Kế hoạch cài Xiaozhi Go trên VPS 194.233.73.211
 
 1. Thêm public key antigravity-ai-agent; kiểm tra SSH bằng key.
@@ -109,3 +120,9 @@ Chi tiết số đo/giới hạn: PHOWHISPER_PLAN.md mục 8. Chưa deploy VPS h
 - [x] Theo lựa chọn người dùng: giữ Gipformer; small vẫn kém về WER/độ trễ, không activate.
 - [x] Dừng tải đồng thời small còn lại, lưu report/giới hạn trong PHOWHISPER_EVALUATION_20261123.md.
 - Không đánh dấu P7 chuyển mặc định là hoàn tất: chuyển đổi không diễn ra vì kết quả không đạt và người dùng chọn giữ model cũ.
+
+## Chẩn đoán âm thanh 2026-11-23
+
+Đã thêm log bật/tắt, thống kê RMS/peak/score VAD và ASR/endpoint, unit tests và hướng dẫn AUDIO_DIAGNOSTICS.md. Chưa lưu audio, chưa deploy, chưa có số đo robot thật.
+
+Xác minh chẩn đoán: test chat/TEN/Silero/hooks, race riêng chẩn đoán và TEN/Silero/hooks, vet và build server đạt. Race toàn chat còn lỗi MCP đã ghi BUG_LOG; Linux/robot thật chưa kiểm tra.

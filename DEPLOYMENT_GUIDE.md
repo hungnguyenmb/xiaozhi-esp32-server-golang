@@ -1,3 +1,7 @@
+## Tích hợp VAD/ASR PR #271 (nhánh thử)
+
+Xem [kế hoạch kiểm tra và phát hành](deployment/vps/PR271_INTEGRATION.md). Chưa triển khai trên VPS. Phát hành qua GitHub Actions sau CI/review; YAML runtime cũ cần migration chọn lọc để bật noise filter, không chép đè secrets hoặc đổi Gipformer.
+
 # HƯỚNG DẪN TRIỂN KHAI VÀ SỬ DỤNG GITHUB ACTIONS (CI/CD)
 > **Dành cho các AI Agent và Developer tiếp quản dự án `xiaozhi-esp32-server-golang`**
 
@@ -188,3 +192,7 @@ WER/CER sử dụng chuẩn hóa NFC, chữ thường, bỏ dấu câu, giữ d�
 - Workflow ASR và backend dùng chung concurrency group `xiaozhi-production-services`; không thay Compose đồng thời.
 
 Workflow sử dụng các SSH secrets sẵn có; tài khoản Manager lấy từ file riêng `/root/.config/xiaozhi-go/admin.json` trên VPS, không cần đưa mật khẩu/token vào Actions.
+
+## Log chẩn đoán âm thanh (chưa deploy)
+
+Xem [AUDIO_DIAGNOSTICS.md](deployment/vps/AUDIO_DIAGNOSTICS.md) để bật/tắt metadata RMS/VAD/ASR và thực hiện buổi đo. Mặc định tắt, không lưu audio hoặc transcript mới. Deploy qua GitHub Actions như quy trình hiện hữu.

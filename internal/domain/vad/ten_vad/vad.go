@@ -8,21 +8,27 @@ import (
 
 	log "xiaozhi-esp32-server-golang/logger"
 
+	"xiaozhi-esp32-server-golang/internal/domain/vad/hysteresis"
 	. "xiaozhi-esp32-server-golang/internal/domain/vad/inter"
 )
 
 // VAD默认配置
 var defaultVADConfig = map[string]interface{}{
-	"hop_size":  512,
-	"threshold": 0.3,
+	"hop_size":      512,
+	"threshold":     0.3,
+	"threshold_low": 0.3,
 }
 
 // TenVAD TEN-VAD模型实现
 type TenVAD struct {
-	handle    unsafe.Pointer
-	hopSize   int
-	threshold float32
-	mu        sync.Mutex
+	diagnosticProbability      float32
+	diagnosticProbabilityValid bool
+	handle                     unsafe.Pointer
+	hopSize                    int
+	threshold                  float32
+	thresholdLow               float32
+	detector                   *hysteresis.Detector
+	mu                         sync.Mutex
 }
 
 // NewTenVAD 创建TenVAD实例
@@ -46,6 +52,7 @@ func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 			threshold = 0.3 // 默认值
 		}
 	}
+	thresholdLow := getConfigFloat32(config, "threshold_low", float32(threshold))
 
 	// 创建TEN-VAD实例
 	tenVAD := GetInstance()
@@ -54,12 +61,14 @@ func NewTenVAD(config map[string]interface{}) (*TenVAD, error) {
 		return nil, fmt.Errorf("创建TEN-VAD实例失败: %v", err)
 	}
 
-	log.Debugf("创建TEN-VAD实例成功, hopSize: %d, threshold: %f", hopSize, threshold)
+	log.Debugf("创建TEN-VAD实例成功, hopSize: %d, threshold: %f, threshold_low: %f", hopSize, threshold, thresholdLow)
 
 	return &TenVAD{
-		handle:    handle,
-		hopSize:   hopSize,
-		threshold: float32(threshold),
+		handle:       handle,
+		hopSize:      hopSize,
+		threshold:    float32(threshold),
+		thresholdLow: thresholdLow,
+		detector:     hysteresis.NewDetector(float32(threshold), thresholdLow),
 	}, nil
 }
 
@@ -72,9 +81,13 @@ func (t *TenVAD) IsVAD(pcmData []float32) (bool, error) {
 func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.diagnosticProbabilityValid = false
 
 	if t.handle == nil {
 		return false, errors.New("TEN-VAD实例未初始化")
+	}
+	if t.detector == nil {
+		t.detector = hysteresis.NewDetector(t.threshold, t.thresholdLow)
 	}
 
 	if len(pcmData) == 0 {
@@ -114,14 +127,15 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 			continue
 		}
 
-		_, flag, err := tenVAD.ProcessAudio(t.handle, frame)
+		probability, _, err := tenVAD.ProcessAudio(t.handle, frame)
 		if err != nil {
 			log.Errorf("TEN-VAD处理音频帧失败: %v", err)
 			continue
 		}
 
-		// flag == 1 表示检测到语音
-		if flag == 1 {
+		t.diagnosticProbability = probability
+		t.diagnosticProbabilityValid = true
+		if t.detector.Evaluate(probability) {
 			hasVoice = true
 			voiceFrameCount++
 		}
@@ -136,9 +150,24 @@ func (t *TenVAD) Reset() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	// TEN-VAD不需要重置，每次处理都是独立的
-	// 但我们可以重新创建实例来重置状态
-	// 这里不做任何操作，因为TEN-VAD是无状态的
+	if t.handle == nil {
+		return errors.New("TEN-VAD instance is closed")
+	}
+	// The native detector also has temporal state. A pooled instance must not
+	// carry one robot's audio history into the next session.
+	tenVAD := GetInstance()
+	handle, err := tenVAD.CreateInstance(t.hopSize, t.threshold)
+	if err != nil {
+		return fmt.Errorf("reset TEN-VAD: %w", err)
+	}
+	if err := tenVAD.DestroyInstance(t.handle); err != nil {
+		_ = tenVAD.DestroyInstance(handle)
+		return fmt.Errorf("release previous TEN-VAD instance: %w", err)
+	}
+	t.handle = handle
+	if t.detector != nil {
+		t.detector.Reset()
+	}
 	return nil
 }
 
@@ -176,4 +205,27 @@ func ReleaseVAD(vad VAD) error {
 		return vad.Close()
 	}
 	return nil
+}
+
+func getConfigFloat32(config map[string]interface{}, key string, fallback float32) float32 {
+	switch value := config[key].(type) {
+	case float32:
+		return value
+	case float64:
+		return float32(value)
+	case int:
+		return float32(value)
+	case int64:
+		return float32(value)
+	case int32:
+		return float32(value)
+	}
+	return fallback
+}
+
+// DiagnosticProbability reports the last inferred window in the latest VAD call.
+func (t *TenVAD) DiagnosticProbability() (float32, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.diagnosticProbability, t.diagnosticProbabilityValid
 }

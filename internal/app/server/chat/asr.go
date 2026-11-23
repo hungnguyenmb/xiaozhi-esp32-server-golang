@@ -17,6 +17,7 @@ import (
 	chathooks "xiaozhi-esp32-server-golang/internal/domain/chat/hooks"
 	"xiaozhi-esp32-server-golang/internal/domain/speaker"
 	"xiaozhi-esp32-server-golang/internal/domain/vad/inter"
+	powervad "xiaozhi-esp32-server-golang/internal/domain/vad/power"
 	"xiaozhi-esp32-server-golang/internal/pool"
 	log "xiaozhi-esp32-server-golang/logger"
 
@@ -149,13 +150,19 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 		vadIdleTicker := time.NewTicker(time.Second)
 		defer vadIdleTicker.Stop()
 		needVad := !(state.Asr.AutoEnd || state.ListenMode == "manual")
+		diagnostics := newAudioDiagnostics(state.DeviceID, state.SessionID)
+		defer diagnostics.flush("process_exit")
 		vadProviderName := state.DeviceConfig.Vad.Provider
 		vadProviderConfig := state.DeviceConfig.Vad.Config
 		effectiveVadProviderName := vadProviderName
 		if configProvider, ok := vadProviderConfig["provider"].(string); ok && configProvider != "" {
 			effectiveVadProviderName = configProvider
 		}
+		if diagnostics.enabled {
+			log.Infof("AUDIO_DIAG setup device=%s session=%s provider=%s need_vad=%t listen_mode=%s asr_auto_end=%t realtime_mode=%d", state.DeviceID, state.SessionID, effectiveVadProviderName, needVad, state.ListenMode, state.Asr.AutoEnd, viper.GetInt("chat.realtime_mode"))
+		}
 		isSileroVAD := effectiveVadProviderName == "silero_vad"
+		keepVadStateBetweenFrames := isSileroVAD || effectiveVadProviderName == "ten_vad"
 		releaseVad := func(reason string) {
 			if vadWrapper == nil {
 				return
@@ -266,52 +273,58 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					audioFormat.FrameDuration = frameDurationMs
 				}
 
+				powerSkipped := !skipVad && needVad && shouldSkipSileroByPower(isSileroVAD, clientHaveVoice, pcmData)
+				vadCalled := false
 				if !skipVad && needVad {
-					if !ensureVad() {
-						continue
-					}
-					//decode opus to pcm
-					state.AsrAudioBuffer.AddAsrAudioData(pcmData)
-
-					// 计算 VAD 需要的最小数据量
-					vadNeedMinSize := frameSize
-
-					if state.AsrAudioBuffer.GetAsrDataSize() >= vadNeedMinSize {
-						if isSileroVAD {
-							vadPcmData = pcmData
-						} else {
-							vadPcmData = state.AsrAudioBuffer.GetAsrData(vadNeedGetCount, frameSize)
-						}
-
-						//如果已经检测到语音, 则不进行vad检测, 直接将pcmData传给asr
-						// 使用循环外获取的VAD资源进行检测
-						if !isSileroVAD {
-							vadLastUseAt = time.Now()
-							if err := vadProvider.Reset(); err != nil {
-								log.Errorf("重置vad失败: %v", err)
-								continue
-							}
-						}
-
-						// 进行VAD检测
-						vadLastUseAt = time.Now()
-						haveVoice, err = vadProvider.IsVADExt(vadPcmData, audioFormat.SampleRate, frameSize)
-						if err != nil {
-							log.Errorf("processAsrAudio VAD检测失败: %v", err)
+					if !powerSkipped {
+						if !ensureVad() {
 							continue
 						}
+						//decode opus to pcm
+						state.AsrAudioBuffer.AddAsrAudioData(pcmData)
 
-						//首次触发识别到语音时,为了语音数据完整性 将vadPcmData赋值给pcmData, 之后的音频数据全部进入asr
-						if haveVoice && !clientHaveVoice {
-							//首次检测到语音时，最多只保留200ms的前静音数据
-							currentFrameSamples := len(pcmData)
-							allData := state.AsrAudioBuffer.GetAndClearAllData()
-							pcmData = trimFirstSpeechAudio(allData, currentFrameSamples, audioFormat.SampleRate, audioFormat.Channels)
+						// 计算 VAD 需要的最小数据量
+						vadNeedMinSize := frameSize
+
+						if state.AsrAudioBuffer.GetAsrDataSize() >= vadNeedMinSize {
+							if isSileroVAD {
+								vadPcmData = pcmData
+							} else {
+								vadPcmData = state.AsrAudioBuffer.GetAsrData(vadNeedGetCount, frameSize)
+							}
+
+							//如果已经检测到语音, 则不进行vad检测, 直接将pcmData传给asr
+							// 使用循环外获取的VAD资源进行检测
+							if !keepVadStateBetweenFrames {
+								vadLastUseAt = time.Now()
+								if err := vadProvider.Reset(); err != nil {
+									log.Errorf("重置vad失败: %v", err)
+									continue
+								}
+							}
+
+							// 进行VAD检测
+							vadLastUseAt = time.Now()
+							vadCalled = true
+							haveVoice, err = vadProvider.IsVADExt(vadPcmData, audioFormat.SampleRate, frameSize)
+							if err != nil {
+								log.Errorf("processAsrAudio VAD检测失败: %v", err)
+								continue
+							}
+
+							//首次触发识别到语音时,为了语音数据完整性 将vadPcmData赋值给pcmData, 之后的音频数据全部进入asr
+							if haveVoice && !clientHaveVoice {
+								//首次检测到语音时，最多只保留200ms的前静音数据
+								currentFrameSamples := len(pcmData)
+								allData := state.AsrAudioBuffer.GetAndClearAllData()
+								pcmData = trimFirstSpeechAudio(allData, currentFrameSamples, audioFormat.SampleRate, audioFormat.Channels)
+							}
 						}
 					}
 					//log.Debugf("isVad, pcmData len: %d, vadPcmData len: %d, haveVoice: %v", len(pcmData), len(vadPcmData), haveVoice)
 				}
 
+				diagnostics.observe(pcmFrame[:n], haveVoice, vadCalled, powerSkipped && !skipVad && needVad, vadProvider, frameDurationMs, effectiveVadProviderName)
 				if haveVoice {
 					hasLoggedFirstTextExtendedWait = false
 					//log.Infof("检测到语音, len: %d", len(pcmData))
@@ -463,6 +476,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					// 判断有音频的语音时长，如果小于300ms则重置clientHaveVoice，避免短时间语音造成的误判
 					voiceDurationInSession := state.Vad.GetVoiceDurationInSession()
 					if voiceDurationInSession < 100 {
+						diagnostics.event("short_voice_rejected", voiceDurationInSession, state.Vad.GetIdleDuration())
 						log.Debugf("语音时长过短 (%dms < 300ms)，重置clientHaveVoice", voiceDurationInSession)
 						state.SetClientHaveVoice(false)
 						state.Vad.ResetVoiceDuration()
@@ -504,6 +518,7 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					}
 
 					if state.IsSilence(idleDuration) { //从有声音到 静默的判断
+						diagnostics.event("silence_end", voiceDurationInSession, idleDuration)
 						log.Debugf(
 							"判定语音结束，准备停止ASR: status=%s, idle=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d, pending_restart=%v",
 							state.Status,
@@ -770,7 +785,9 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				}
 			}
 
+			logASRDiagnostic(state.DeviceID, state.SessionID, "result", len([]rune(text)), state.Vad.GetVoiceDurationInSession(), state.GetAsrDuration(), state.Vad.GetIdleDuration())
 			if text != "" {
+				voiceDurationMs := state.Vad.GetVoiceDurationInSession()
 				asrFinalTs := time.Now().UnixMilli()
 				state.MarkAsrFinalTextAt(asrFinalTs)
 				if a.session != nil {
@@ -784,23 +801,6 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				emptyResultCount = 0
 				recoverableErrorWindowStart = time.Now()
 				recoverableErrorCount = 0
-
-				//如果是realtime模式下，需要停止 当前的llm和tts
-				if state.IsRealTime() && viper.GetInt("chat.realtime_mode") == 2 {
-					shouldInterrupt := true
-					if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
-						shouldInterrupt = false
-						log.Debugf("设备 %s realtime媒体播放门控激活，延后到ASR final门控判定，跳过ASR结果打断", state.DeviceID)
-					}
-					if shouldInterrupt {
-						log.Debugf("OnListenStart realtime模式下, 停止当前的llm和tts")
-						if a.session != nil {
-							a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.StartAsrRecognitionLoop realtime_mode=2 ASR result interrupt")
-						} else {
-							state.AfterAsrSessionCtx.CancelWithReason("ASRManager.StartAsrRecognitionLoop: realtime_mode=2 ASR result interrupt")
-						}
-					}
-				}
 
 				// 重置重试计数器
 				startIdleTime = time.Now().Unix()
@@ -816,20 +816,34 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 				}
 
 				if a.session != nil {
-					payload, stop, hookErr := a.session.hookHub.EmitASROutput(a.session.hookContext(ctx), chathooks.ASROutputData{Text: text, SpeakerResult: speakerResult})
+					payload, stop, hookErr := a.session.hookHub.EmitASROutput(a.session.hookContext(ctx), chathooks.ASROutputData{Text: text, SpeakerResult: speakerResult, VoiceDurationMs: voiceDurationMs})
 					if hookErr != nil {
 						log.Warnf("ASR_OUTPUT hook 执行失败: %v", hookErr)
 					}
+					logASRDiagnostic(state.DeviceID, state.SessionID, fmt.Sprintf("hook_stop=%t,error=%t", stop, hookErr != nil), len([]rune(payload.Text)), voiceDurationMs, state.GetAsrDuration(), state.Vad.GetIdleDuration())
 					text = payload.Text
 					speakerResult = payload.SpeakerResult
 					if stop {
 						log.Infof("ASR_OUTPUT hook 请求停止当前流程")
 						state.Asr.ClearHistoryAudio()
-						if state.UsesAudioIdleClock() {
-							startAudioIdle()
-						} else {
-							state.ResetAudioIdleWindow()
+
+						if !state.IsRealTime() {
+							if state.UsesAudioIdleClock() {
+								startAudioIdle()
+							} else {
+								state.ResetAudioIdleWindow()
+							}
+							return
 						}
+
+						if restartErr := a.RestartAsrRecognition(ctx); restartErr != nil {
+							log.Errorf("ASR_OUTPUT hook 停止流程后重启识别失败: %v", restartErr)
+							if onError != nil {
+								onError(restartErr)
+							}
+							return
+						}
+						startAudioIdle()
 						continue
 					}
 				}
@@ -860,6 +874,23 @@ func (a *ASRManager) StartAsrRecognitionLoop(
 						}
 						startAudioIdle()
 						continue
+					}
+				}
+
+				//如果是realtime模式下，需要停止 当前的llm和tts
+				if state.IsRealTime() && viper.GetInt("chat.realtime_mode") == 2 {
+					shouldInterrupt := true
+					if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
+						shouldInterrupt = false
+						log.Debugf("设备 %s realtime媒体播放门控激活，延后到ASR final门控判定，跳过ASR结果打断", state.DeviceID)
+					}
+					if shouldInterrupt {
+						log.Debugf("OnListenStart realtime模式下, 停止当前的llm和tts")
+						if a.session != nil {
+							a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.StartAsrRecognitionLoop realtime_mode=2 ASR result interrupt")
+						} else {
+							state.AfterAsrSessionCtx.CancelWithReason("ASRManager.StartAsrRecognitionLoop: realtime_mode=2 ASR result interrupt")
+						}
 					}
 				}
 
@@ -1070,6 +1101,10 @@ func trimFirstSpeechAudio(allData []float32, currentFrameSamples, sampleRate, ch
 	audio := make([]float32, keepSamples)
 	copy(audio, allData[len(allData)-keepSamples:])
 	return audio
+}
+
+func shouldSkipSileroByPower(isSileroVAD, clientHaveVoice bool, pcmData []float32) bool {
+	return isSileroVAD && !clientHaveVoice && powervad.IsSilent(pcmData)
 }
 
 // getSpeakerResult 获取暂存的声纹结果（带超时）

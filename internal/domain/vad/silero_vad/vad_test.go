@@ -8,6 +8,19 @@ import (
 	"testing"
 )
 
+func TestMissingLowThresholdUsesConfiguredHighThreshold(t *testing.T) {
+	cfg := withDefaults(map[string]interface{}{"threshold": 0.8})
+	high := getFloat32(cfg, "threshold", 0.5)
+	low := getFloat32(cfg, "threshold_low", high)
+	if low != high {
+		t.Fatalf("legacy config must stay single-threshold: high=%v low=%v", high, low)
+	}
+	cfg["threshold_low"] = 0.0
+	if low := getFloat32(cfg, "threshold_low", high); low != 0 {
+		t.Fatalf("explicit zero low threshold must be preserved: %v", low)
+	}
+}
+
 func TestResolveNumSessionsDefaultsToCPUCount(t *testing.T) {
 	got := resolveNumSessions(withDefaults(map[string]interface{}{}))
 	want := runtime.NumCPU()

@@ -45,8 +45,11 @@
       <el-form-item label="Đường dẫn mô hình" prop="silero_vad.model_path">
         <el-input v-model="model.silero_vad.model_path" placeholder="Vui lòng nhập đường dẫn tệp mô hình" />
       </el-form-item>
-      <el-form-item label="Ngưỡng" prop="silero_vad.threshold">
+      <el-form-item label="Ngưỡng bắt đầu nói" prop="silero_vad.threshold">
         <el-input-number v-model="model.silero_vad.threshold" :min="0" :max="1" :step="0.1" :precision="2" style="width: 100%" />
+      </el-form-item>
+      <el-form-item label="Ngưỡng kết thúc nói" prop="silero_vad.threshold_low">
+        <el-input-number v-model="model.silero_vad.threshold_low" :min="0" :max="1" :step="0.1" :precision="2" style="width: 100%" />
       </el-form-item>
       <el-form-item label="Thời lượng im lặng tối thiểu của  (ms)" prop="silero_vad.min_silence_duration_ms">
         <el-input-number v-model="model.silero_vad.min_silence_duration_ms" :min="10" :max="5000" style="width: 100%" />
@@ -77,9 +80,13 @@
         <el-input-number v-model="model.ten_vad.hop_size" :min="128" :max="1024" style="width: 100%" />
         <div style="font-size: 12px; color: #909399; margin-top: 4px;">Mặc định: 320</div>
       </el-form-item>
-      <el-form-item label="Ngưỡng phát hiện  VAD" prop="ten_vad.threshold">
+      <el-form-item label="Ngưỡng bắt đầu nói" prop="ten_vad.threshold">
         <el-input-number v-model="model.ten_vad.threshold" :min="0" :max="1" :step="0.1" :precision="2" style="width: 100%" />
         <div style="font-size: 12px; color: #909399; margin-top: 4px;">Giá trị đề xuất: 0,3</div>
+      </el-form-item>
+      <el-form-item label="Ngưỡng kết thúc nói" prop="ten_vad.threshold_low">
+        <el-input-number v-model="model.ten_vad.threshold_low" :min="0" :max="1" :step="0.1" :precision="2" style="width: 100%" />
+        <div style="font-size: 12px; color: #909399; margin-top: 4px;">Giá trị đề xuất: 0,2</div>
       </el-form-item>
       <el-form-item label="Kích thước nhóm kết nối" prop="ten_vad.pool_size">
         <el-input-number v-model="model.ten_vad.pool_size" :min="1" :max="100" style="width: 100%" />
