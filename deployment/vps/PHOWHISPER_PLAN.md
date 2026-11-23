@@ -151,3 +151,7 @@ Bước tiếp theo: hoàn tất dữ liệu benchmark P1 và chạy kiểm tra 
 - Benchmark base dùng 30 câu FLEURS vi_vn validation (CC BY 4.0) và 20 mẫu synthetic zero/noise/hum/impulse: Gipformer WER 4,07%, CER 1,61%; base WER 10,49%, CER 5,19%. Tải đơn p95 cả 50 mẫu: Gipformer 313 ms, base 3531 ms. Không nhầm với p95 riêng 2–5 giây; cần phân tích nhóm mẫu sau.
 - Đổi manifest trial sang vinai/PhoWhisper-small revision a86b604c346caf7148c37512eafe783a16420adb; giữ cùng runtime INT8/2 threads/CPU limit và cùng suite để so sánh công bằng. Đổi config ID/name ứng với small để không ghi sai model nếu phát hành về sau; chưa tạo cấu hình hoặc đổi mặc định.
 - Thực hiện qua nhánh tính năng, CI và merge production rồi dispatch trial/benchmark bằng Actions. Chờ benchmark base kết thúc trước thay sidecar. Không đưa audio/weights vào Git.
+
+## 11. Kết quả và quyết định sau thử small — 2026-11-23
+
+Small trial run 45093997463 thành công. Benchmark tải đơn run 45094536526: WER 7,07%, CER 3,86%, p95 cả 50 mẫu 5,910 giây; vẫn kém Gipformer. Người dùng đã chọn giữ Gipformer; không activate. Chủ động dừng các lượt tải đồng thời còn lại vì tải đơn đã không đạt. Báo cáo đầy đủ, dataset, giới hạn và số đo robot thật nằm ở PHOWHISPER_EVALUATION_20261123.md.

@@ -139,3 +139,10 @@ Xem BUG_LOG.md để biết hạn chế của công cụ test upstream với c�
 - Model thật local ARM64 INT8, 2 threads: 511,4 ms tải đơn và 526,89–2137,8 ms/4 yêu cầu cho cùng mẫu speech. Silence zero rỗng; không phải benchmark VPS hoặc đánh giá noise/độ chính xác đầy đủ.
 - 28 unit tests PASS; Python compile/actionlint/Compose config PASS. Docker daemon local chưa chạy, chưa build image Linux/chạy CI hoặc deploy PhoWhisper trên VPS. Không đổi ASR mặc định, chưa xác minh robot thật.
 - Kế hoạch/bàn giao và lệnh đầy đủ: PHOWHISPER_PLAN.md mục 8 và DEPLOYMENT_GUIDE.md mục 6.
+
+## PhoWhisper — đánh giá trên VPS 2026-11-23
+
+- Trial base/small và benchmark qua Actions; sửa OTA probe GET thiếu Device-Id ở PR #3, small profile ở PR #4. Không deploy thủ công dịch vụ.
+- Bộ 30 speech FLEURS CC BY 4.0 +20 nonspeech tổng hợp: Gipformer WER 4,07%, base 10,49%, small 7,07%. p95 tải đơn 50 mẫu lần lượt khoảng 0,28–0,31 / 3,53 / 5,91 giây. Small tải đồng thời được chủ động dừng sau tải đơn không đạt.
+- User chọn giữ Gipformer; ASR mặc định xác minh vps_asr, chưa từng chạy activate. Sidecar small healthy nhưng không làm mặc định. Dừng đúng benchmark client để trả CPU, giữ backend/ASR/TTS.
+- Chi tiết số đo/nguồn/giới hạn/run URL: PHOWHISPER_EVALUATION_20261123.md.
