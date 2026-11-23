@@ -1,8 +1,14 @@
 {
-  "source": "vinai/PhoWhisper-base",
-  "revision": "7ebdb9e88f5cc5271fb88f4d642c82ff9388650e",
+  "source": "vinai/PhoWhisper-small",
+  "revision": "a86b604c346caf7148c37512eafe783a16420adb",
   "quantization": "int8",
   "language": "vi",
-  "runtime": {"faster-whisper": "1.2.1", "ctranslate2": "4.6.0"},
-  "conversion": {"transformers": "4.55.4", "torch": "2.8.0"}
+  "runtime": {
+    "faster-whisper": "1.2.1",
+    "ctranslate2": "4.6.0"
+  },
+  "conversion": {
+    "transformers": "4.55.4",
+    "torch": "2.8.0"
+  }
 }
