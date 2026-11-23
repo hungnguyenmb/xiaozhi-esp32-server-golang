@@ -65,3 +65,7 @@ Sau phát hành: kiểm tra audio_capture enabled, owner config, container healt
 - Export bằng utility trong container: probe-mic.wav 16 kHz mono PCM16/6.000 s; probe-speaker.wav 16 kHz mono PCM16/4.686 s (gồm khoảng trước output theo timeline). File giữ trong thư mục kết nối riêng trên VPS, không commit hoặc công khai.
 - SHA256 core: `6807ceaac08192dba7bb53f9740020c138bbe76c4590623771af3505400810ad`; exporter: `223ffc66d6f5213bd37a8bde3abd8e52556fb501963b14828a7e462eb9e5dcf3`.
 - Chưa phân tích âm thanh echo thật sau triển khai. Bước tiếp: người dùng thử robot, ghi thời điểm; lấy thư mục của robot theo header/device, export mic/speaker, đối chiếu timestamps và AUDIO_DIAG. Không nhầm dữ liệu probe với tiếng động phòng thật. Không tự xóa dữ liệu.
+
+## Lượt đọc log/audio tiếp theo
+
+Đã có snapshot audio robot thật lúc 22:07–22:08, 823 mic/203 speaker packets và xuất WAV. Phân tích sơ bộ chưa chứng minh nội dung mic trùng lời loa; có tái kích hoạt đáng nghi sau mở mic. Chi tiết và giới hạn ở ECHO_DIAGNOSIS_20261123.md. Không đổi cấu hình/deploy trong lượt kiểm tra này.
