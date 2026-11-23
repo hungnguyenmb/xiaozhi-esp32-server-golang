@@ -143,3 +143,11 @@ Bước tiếp theo: hoàn tất dữ liệu benchmark P1 và chạy kiểm tra 
 - CI Linux run 45084318304 thành công: 28 tests, Compose, build/chuyển model INT8, warm-up và WebSocket speech/silence với model thật. Đây là GitHub runner, chưa phải benchmark VPS AMD.
 - CI phát hiện Docker context bị .dockerignore cũ loại file; đã thêm Dockerfile.phowhisper.dockerignore allowlist.
 - Sửa thêm phạm vi concurrency sau khi thấy CI production bị hủy do tranh chỗ pending: khóa dùng chung chỉ áp dụng job deploy ASR, CI theo ref/event. Không dispatch trial/activate trong task commit/merge này.
+
+## 10. Thử PhoWhisper-small — 2026-11-23
+
+- Người dùng chọn giữ Gipformer và thử small sau khi thấy base kém hơn. Không activate trong bước thử small này.
+- Trial base đã cài qua run 45092837122, lỗi probe OTA cuối đã sửa tại PR #3; sidecar healthy, ASR mặc định vẫn Gipformer.
+- Benchmark base dùng 30 câu FLEURS vi_vn validation (CC BY 4.0) và 20 mẫu synthetic zero/noise/hum/impulse: Gipformer WER 4,07%, CER 1,61%; base WER 10,49%, CER 5,19%. Tải đơn p95 cả 50 mẫu: Gipformer 313 ms, base 3531 ms. Không nhầm với p95 riêng 2–5 giây; cần phân tích nhóm mẫu sau.
+- Đổi manifest trial sang vinai/PhoWhisper-small revision a86b604c346caf7148c37512eafe783a16420adb; giữ cùng runtime INT8/2 threads/CPU limit và cùng suite để so sánh công bằng. Đổi config ID/name ứng với small để không ghi sai model nếu phát hành về sau; chưa tạo cấu hình hoặc đổi mặc định.
+- Thực hiện qua nhánh tính năng, CI và merge production rồi dispatch trial/benchmark bằng Actions. Chờ benchmark base kết thúc trước thay sidecar. Không đưa audio/weights vào Git.

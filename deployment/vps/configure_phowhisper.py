@@ -7,7 +7,7 @@ import re
 import urllib.request
 from pathlib import Path
 
-CONFIG_ID = "phowhisper_base_int8"
+CONFIG_ID = "phowhisper_small_int8"
 SETTINGS = {"host": "asr-phowhisper", "port": "10096", "mode": "offline",
             "sample_rate": 16000, "chunk_size": [5, 10, 5], "chunk_interval": 10,
             "max_connections": 4, "timeout": 30, "auto_end": False}
@@ -79,7 +79,7 @@ def configure(manager, action, saved):
     if candidate is None:
         # Typed endpoint avoids the legacy generic CreateConfig memory/default bug.
         candidate = manager.api("POST", "/api/admin/asr-configs", {
-            "name": "PhoWhisper base INT8 CPU", "config_id": CONFIG_ID,
+            "name": "PhoWhisper small INT8 CPU", "config_id": CONFIG_ID,
             "provider": "funasr", "json_data": json.dumps(SETTINGS),
             "enabled": True, "is_default": False,
         })["data"]
