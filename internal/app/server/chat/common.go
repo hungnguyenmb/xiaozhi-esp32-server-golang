@@ -98,6 +98,7 @@ func (s *ChatSession) ResetToSilentState() {
 	s.stopSpeakingWithLock(true, true, true, "ChatSession.ResetToSilentState")
 
 	if s.clientState != nil {
+		s.clientState.AudioInput.Block()
 		s.clientState.Destroy()
 		s.clientState.Abort = false
 		s.clientState.IsWelcomeSpeaking = false

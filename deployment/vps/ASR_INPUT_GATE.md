@@ -59,3 +59,5 @@ Có dò offline dữ liệu cũ bằng native TEN ở Mac (hop512/threshold0.4) 
 Sau CI/release: kiểm tra config enabled/guard và các mục khác không đổi, container/HTTPS/OTA/WSS, capture hoạt động. Robot thật cần một câu rồi im lặng, nhiễu phòng, wake keyword giữa TTS, câu ngắn và câu ngay sau TTS; ghi thời điểm để đối chiếu. Đây là bước nghiệm thu chưa hoàn tất, không khẳng định đã loại mọi tiếng vọng.
 
 Bổ sung rà soát: bắt đầu epoch mới sau khi đã đồng bộ stop output cũ. Sau speaker/hook có kiểm tra context/token trước side effects; chuyển kết quả vào LLM giữ source context/input token và publish dưới stopSpeakingMu, tránh gắn câu cũ vào SessionCtx mới. Test context hủy và token bị thay đều không tạo item LLM; release ownership kiểm tra trong cùng resourceMu với slot provider.
+
+Rà soát vòng đời phiên: Configure ở phiên mới vô hiệu epoch/trạng thái nghe cũ; Close/ResetToSilentState đóng gate. Full tests/race chọn lọc sau cập nhật đạt, có test reconfigure không chấp nhận audio từ phiên trước.

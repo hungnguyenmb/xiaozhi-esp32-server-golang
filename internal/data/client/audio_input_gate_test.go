@@ -160,3 +160,15 @@ func TestAudioInputGateConcurrentLifecycle(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestAudioInputGateSessionReconfigureStartsClosed(t *testing.T) {
+	var gate AudioInputGate
+	gate.Configure(true, 0)
+	queue := make(chan OpusInputFrame, 1)
+	epoch, _ := gate.BeginListen("auto", time.Now(), queue)
+	gate.Ready(epoch)
+	gate.Configure(true, 300*time.Millisecond)
+	if gate.Allows(epoch) || gate.Queue(queue, []byte{1}, time.Now()) != "busy" {
+		t.Fatal("new session accepted old listen state")
+	}
+}

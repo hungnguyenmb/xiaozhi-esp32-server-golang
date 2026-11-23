@@ -1583,6 +1583,9 @@ func (s *ChatSession) IsClosing() bool {
 
 func (s *ChatSession) CloseWithReason(reason string) {
 	s.closing.Store(true)
+	if s.clientState != nil {
+		s.clientState.AudioInput.Block()
+	}
 	s.closeOnce.Do(func() {
 		if s.realtimeAudio != nil {
 			s.realtimeAudio.Close()

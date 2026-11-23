@@ -30,9 +30,17 @@ type AudioInputGate struct {
 func (g *AudioInputGate) Configure(enabled bool, guard time.Duration) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	g.notify()
+	g.epoch++
 	g.enabled = enabled
 	g.auto = true
+	g.active = false
+	g.ready = false
 	g.guard = guard
+	g.naturalStop = time.Time{}
+	g.wakeUntil = time.Time{}
+	g.settlePending = false
+	g.settleUntil = time.Time{}
 }
 func (g *AudioInputGate) notify() {
 	if g.readyCh != nil {
