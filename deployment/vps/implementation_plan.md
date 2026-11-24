@@ -1,3 +1,11 @@
+# Code sửa tool history/error speech đã qua local — 2026-11-24
+
+Nhánh fix/tool-history-error-speech. Regression trước sửa đã tái hiện; sau sửa full client/chat tests, race chọn lọc, vet theo scope và actionlint đạt. Chờ CI Linux, merge/deploy Actions giữ nguyên audio inputs. Theo dõi TOOL_HISTORY_ERROR_FIX.md; false positives âm thanh chưa thuộc bản sửa này.
+
+# Đang sửa multi-tool history và lỗi đọc ra loa — 2026-11-24
+
+Người dùng đã yêu cầu sửa và deploy. Nhánh fix/tool-history-error-speech; kế hoạch/tiêu chí tại TOOL_HISTORY_ERROR_FIX.md, bằng chứng tại NOISE_ROBOT_TEST_20261124.md. Giữ nguyên noise enforce và firmware; kiểm thử trước merge và deploy chỉ qua Actions production.
+
 # Đã bật thử lọc nhiễu trên VPS — 2026-11-24
 
 Người dùng đã yêu cầu merge/deploy và bật lọc để thử robot. PR #17 merge production5d5cceb6; Actions45316196051 thành công, runtime chat.audio_preprocess.mode=enforce. Đây là thử nghiệm mic thật, không đồng nghĩa đã đạt toàn bộ tiêu chí câu ngắn/giọng nhỏ/false positives. Firmware/Gipformer/LLM/TTS và capture giữ nguyên. Xem mục phát hành mới nhất trong BACKEND_NOISE_SUPPRESSION.md; không áp dụng các trạng thái “chưa deploy/off” của lịch sử bên dưới cho runtime hiện tại.

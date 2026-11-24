@@ -186,3 +186,7 @@ CI cuối [45315184231](https://github.com/hungnguyenmb/xiaozhi-esp32-server-gol
 ## 2026-11-24 — merge và bật thử lọc nhiễu
 
 PR17 merge production5d5cceb6. Actions45316196051 thành công với audio_preprocess=enforce; push45316167741 hủy trước deploy. Binary9ec6839f…, native health/self-check PASS, backend healthy/restarts0, config khác/owner/mode giữ nguyên; capture/gate/diagnostics vẫn bật. Admin HTTPS/TLS/OTA/WSS/auth/route isolation đạt. Giữ firmware, Gipformer, LLM/TTS; còn test robot thật. Báo cáo đầy đủ/rollback tại BACKEND_NOISE_SUPPRESSION.md.
+
+## 2026-11-24 — chuẩn bị deploy sửa tool history/error speech
+
+Nhánh fix/tool-history-error-speech. Không đổi cấu hình/provider/audio pipeline. Sau CI sẽ merge production/deploy bằng Actions với audio inputs unchanged theo yêu cầu người dùng. Chi tiết kiểm thử/run/rollback tại TOOL_HISTORY_ERROR_FIX.md; mục này chưa xác nhận release thành công.

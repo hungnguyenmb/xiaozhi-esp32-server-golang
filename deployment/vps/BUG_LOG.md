@@ -101,3 +101,7 @@ Generator mix ban đầu scale PCM int16 như float chuẩn hóa nên mẫu ch�
 ## 2026-11-24 — lỗi400 multi-tool và false positives trên mic thật
 
 Sau enforce, native pipeline hoạt động nhưng VAD vẫn nhận nền (score~0.77, và lượt96 ms score~0.61). Đồng thời AlignToolMessages nhân đôi assistant có2 tool calls, khiến OpenAI400 lặp lại; handler đọc lỗi kỹ thuật ra TTS. Đã đối chiếu logs/DB/source và snapshot audio, chưa sửa runtime/code. Bằng chứng và hướng xử lý: NOISE_ROBOT_TEST_20261124.md.
+
+## 2026-11-24 — bản sửa multi-tool/error speech (chờ release)
+
+Regression xác nhận AlignToolMessages nhân đôi assistant và mượn responses qua turn khác; MessageID millisecond trùng20 tool messages còn1ID; provider error bị đưa thẳng vào text/TTS. Đã sửa theo contiguous round, UUID32 cho bản ghi mới và empty-end khi lỗi. Tests client/chat/race chọn lọc local đạt; CI/deploy còn chờ. Xem TOOL_HISTORY_ERROR_FIX.md, gồm giới hạn test Eino cũ và việc false-positive audio chưa sửa.

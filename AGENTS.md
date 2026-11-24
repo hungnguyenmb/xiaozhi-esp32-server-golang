@@ -30,3 +30,5 @@
 - Runtime mới nhất2026-11-24: PR17 merge production5d5cceb6, Actions45316196051 deploy thành công/bật audio_preprocess=enforce theo yêu cầu người dùng để thử robot. Gate300 ms/diagnostics/capture giữ bật; health/native/OTA/WSS/admin đạt. Chưa nghiệm thu mic thật. Đọc mục phát hành cuối BACKEND_NOISE_SUPPRESSION.md trước check log/tuning; các ghi chú off/chưa deploy phía trên là lịch sử.
 
 - Kiểm tra mic thật sau enforce: deployment/vps/NOISE_ROBOT_TEST_20261124.md. Native chạy nhưng còn false positives; AlignToolMessages nhân đôi assistant khi2 tool calls gây OpenAI400, handler còn đọc lỗi kỹ thuật ra loa. Lượt check log chưa sửa code/config; ưu tiên xử lý hai lỗi riêng, không blacklist từ ngắn.
+
+- Đang sửa nhánh fix/tool-history-error-speech: TOOL_HISTORY_ERROR_FIX.md ghi regression, contiguous tool-round normalization, UUID32 cho persistence và silent provider errors. Người dùng đã yêu cầu deploy qua Actions; không đổi noise frontend/firmware. Chờ trạng thái CI/deploy trong tài liệu trước kết luận đã phát hành.

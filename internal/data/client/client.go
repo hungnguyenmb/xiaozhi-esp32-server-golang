@@ -253,67 +253,87 @@ func AlignMessage(messages []*schema.Message) []*schema.Message {
 	return messages
 }
 */
-// AlignToolMessages 保证 role:tool 消息中的 tool_call_id 与 role:assistant 消息中的 tool_calls 的 id 对应
-// 如果不匹配则删除对应的 tool 消息，同时处理反向不匹配的场景
+// AlignToolMessages returns a request-safe view of contiguous assistant/tool
+// rounds. It never mutates stored messages or borrows results across user turns.
 func AlignToolMessages(messages []*schema.Message) []*schema.Message {
 	if len(messages) == 0 {
 		return messages
 	}
-
-	// 收集所有 assistant 消息中的 tool_calls id
-	validToolCallIDs := make(map[string]bool)
-	// 收集所有 tool 消息中的 tool_call_id
-	usedToolCallIDs := make(map[string]bool)
-
-	// 第一遍遍历：收集 assistant 消息中的 tool_calls id 和 tool 消息中的 tool_call_id
-	for _, msg := range messages {
-		if msg == nil {
+	var aligned []*schema.Message
+	for i := 0; i < len(messages); {
+		msg := messages[i]
+		i++
+		if msg == nil || msg.Role == schema.Tool {
+			continue
+		} // orphan/truncated result
+		if msg.Role != schema.Assistant || len(msg.ToolCalls) == 0 {
+			aligned = append(aligned, msg)
 			continue
 		}
 
-		if msg.Role == schema.Assistant && len(msg.ToolCalls) > 0 {
-			for _, toolCall := range msg.ToolCalls {
-				if toolCall.ID != "" {
-					validToolCallIDs[toolCall.ID] = true
-				}
+		// The former alignment appended the same multi-call assistant once per call.
+		// Repair adjacent duplicates already loaded from older persisted histories.
+		for i < len(messages) {
+			if messages[i] == nil {
+				i++
+				continue
 			}
+			if !sameToolAssistant(msg, messages[i]) {
+				break
+			}
+			i++
+		}
+		responses := make(map[string]*schema.Message)
+		for i < len(messages) {
+			response := messages[i]
+			if response == nil {
+				i++
+				continue
+			}
+			if response.Role != schema.Tool {
+				break
+			}
+			if response.ToolCallID != "" && responses[response.ToolCallID] == nil {
+				responses[response.ToolCallID] = response
+			}
+			i++
 		}
 
-		if msg.Role == schema.Tool && msg.ToolCallID != "" {
-			usedToolCallIDs[msg.ToolCallID] = true
+		copyMsg := *msg
+		copyMsg.ToolCalls = nil
+		var matched []*schema.Message
+		seen := make(map[string]bool)
+		for _, call := range msg.ToolCalls {
+			if call.ID == "" || seen[call.ID] {
+				continue
+			}
+			seen[call.ID] = true
+			if response := responses[call.ID]; response != nil {
+				copyMsg.ToolCalls = append(copyMsg.ToolCalls, call)
+				matched = append(matched, response)
+			}
+		}
+		// An interrupted/incomplete tool round may retain its ordinary prose, but
+		// unanswered calls must not be sent to the provider or executed again.
+		if len(copyMsg.ToolCalls) > 0 || copyMsg.Content != "" || len(copyMsg.MultiContent) > 0 {
+			aligned = append(aligned, &copyMsg)
+			aligned = append(aligned, matched...)
 		}
 	}
+	return aligned
+}
 
-	// 过滤消息，处理双向不匹配的情况
-	var alignedMessages []*schema.Message
-	for _, msg := range messages {
-		if msg == nil {
-			continue
-		}
-
-		// 如果是 tool 消息，检查 tool_call_id 是否有效
-		if msg.Role == schema.Tool {
-			if msg.ToolCallID != "" && validToolCallIDs[msg.ToolCallID] {
-				alignedMessages = append(alignedMessages, msg)
-			}
-		} else if msg.Role == schema.Assistant && len(msg.ToolCalls) > 0 {
-			// 处理 assistant 消息，检查是否有未使用的 tool_calls
-			for _, toolCall := range msg.ToolCalls {
-				if toolCall.ID != "" {
-					if usedToolCallIDs[toolCall.ID] {
-						alignedMessages = append(alignedMessages, msg)
-					} else {
-						continue
-					}
-				}
-			}
-		} else {
-			// 其他类型的消息直接保留
-			alignedMessages = append(alignedMessages, msg)
+func sameToolAssistant(a, b *schema.Message) bool {
+	if b == nil || b.Role != schema.Assistant || a.Content != b.Content || len(a.ToolCalls) != len(b.ToolCalls) || len(a.MultiContent) > 0 || len(b.MultiContent) > 0 {
+		return false
+	}
+	for i, x := range a.ToolCalls {
+		y := b.ToolCalls[i]
+		if x.ID == "" || x.ID != y.ID || x.Type != y.Type || x.Function != y.Function {
+			return false
 		}
 	}
-
-	return alignedMessages
+	return true
 }
 
 func (c *ClientState) InitMessages(messages []*schema.Message) error {

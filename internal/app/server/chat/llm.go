@@ -2,8 +2,6 @@ package chat
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -22,6 +20,7 @@ import (
 	log "xiaozhi-esp32-server-golang/logger"
 
 	"github.com/cloudwego/eino/schema"
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 )
 
@@ -498,7 +497,10 @@ func (l *LLMManager) handleLLMWithContextAndTools(
 				if llm.IsLLMErrorMessage(message) {
 					errMsg := llm.LLMErrorMessage(message)
 					log.Warnf("LLM 返回错误: %s", errMsg)
-					stop, pushErr := pushRawText(errMsg, true, nil)
+					// Provider diagnostics are not assistant speech. Flush only legitimate
+					// buffered text and send an empty end; never expose the error
+					// to raw-text hooks, TTS, or conversation persistence.
+					stop, pushErr := pushToPipeline(streamtransform.Item{Kind: streamtransform.ItemKindTextDelta, IsEnd: true})
 					if pushErr != nil {
 						log.Errorf("处理 LLM 错误输出失败: %v", pushErr)
 					}
@@ -1092,15 +1094,10 @@ func (l *LLMManager) AddMessage(ctx context.Context, msg *schema.Message) error 
 		return fmt.Errorf("消息不能为 nil")
 	}
 
-	// 生成 MessageID（使用 MD5 哈希缩短长度，避免超过数据库 varchar(64) 限制）
-	// 原始格式：{SessionID}-{Role}-{Timestamp}
-	rawMessageID := fmt.Sprintf("%s-%s-%d",
-		l.clientState.SessionID,
-		msg.Role,
-		time.Now().UnixMilli())
-	// 使用 MD5 哈希生成固定32字符的十六进制字符串
-	hash := md5.Sum([]byte(rawMessageID))
-	messageID := hex.EncodeToString(hash[:])
+	// Concurrent tool results can be saved in the same millisecond. A unique
+	// 32-character ID avoids overwriting one result while retaining the existing
+	// history/audio ID format and two-phase update contract.
+	messageID := strings.ReplaceAll(uuid.NewString(), "-", "")
 
 	// 同步添加到内存中
 	l.clientState.AddMessage(msg)
@@ -1162,7 +1159,7 @@ func (l *LLMManager) GetMessages(ctx context.Context, userMessage *schema.Messag
 			messageList = trimTrailingUserMessages(messageList)
 		}
 	} else if toolRoundMessages := toolRoundMessagesFromContext(ctx); len(toolRoundMessages) > 0 {
-		messageList = toolRoundMessages
+		messageList = AlignToolMessages(toolRoundMessages)
 	}
 
 	// 构建 system prompt
