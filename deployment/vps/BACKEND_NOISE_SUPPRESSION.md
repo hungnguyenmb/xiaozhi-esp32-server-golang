@@ -2,7 +2,7 @@
 
 ## Hiện trạng
 
-Nhánh feat/backend-noise-suppression từ production06ab4ed7, đã có code thử, đang hoàn tất CI. Người dùng yêu cầu triển khai code theo BACKEND_NOISE_SUPPRESSION_PLAN.md. Chưa merge/deploy, runtime VPS giữ nguyên. Đừng tự coi code đã đạt mọi tiêu chí chất lượng.
+Nhánh feat/backend-noise-suppression từ production06ab4ed7; code đã commit/push, CI Linux cuối thành công. Người dùng yêu cầu triển khai code theo BACKEND_NOISE_SUPPRESSION_PLAN.md. Chưa merge/deploy, runtime VPS giữ nguyên. Đừng tự coi code đã đạt mọi tiêu chí chất lượng.
 
 ## Đường xử lý đã có
 
@@ -67,7 +67,7 @@ Không -include-text thì không có transcript trong JSON; chấm WER cần b�
 
 ## Bằng chứng sơ bộ và giới hạn
 
-- Local macOS ARM native tests full packages liên quan/race chọn lọc/vet/actionlint đạt ở thời điểm ghi; CI Linux lần đầu [45314376269](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45314376269) đạt backend+frontend (commit5458b79f); đang chạy lại cho các bổ sung cuối. Docker daemon local không chạy nên chưa build Docker đầy đủ. Kiểm tra run CI trước merge.
+- Local macOS ARM native tests full packages liên quan/race chọn lọc/vet/actionlint đạt ở thời điểm ghi; CI Linux lần đầu [45314376269](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45314376269) đạt backend+frontend (commit5458b79f); CI cuối [45315184231](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45315184231) commit72e2cf03 cũng thành công, gồm native self-check, mock health rollback, tests/vet/build và frontend. Docker daemon local không chạy nên chưa build Docker đầy đủ. Kiểm tra run CI trước merge.
 - Suite cũ50 mẫu:30 FLEURS tiếng Việt +20 synthetic noise/silence, không phải50 câu nói sạch. Config thử .55/.35/.85+RNNoise mở đủ30speech, không mở20noise. WER4.28% (20/467) so raw Gipformer4.07% (19/467) đo lại qua SSH tunnel ASR hiện hữu. Raw-ASR-only không có VAD lọc20noise và trả text cả20; script verify vì vậy exit1 sau khi in JSON, đây là kết quả hồi quy tiếng nền chứ không phải benchmark bị mất dữ liệu. Phép so WER này chưa padded EOF, còn Open segments; không dùng như nghiệm thu mất đầu/cuối câu.
 - Snapshot robot23 cửa sổ: frontend .55/.35/.85 chưa denoise mở13 lượt; có denoise mở6, gồm câu chào đầu. Thử .65/.40/.90 mở3. Vẫn còn nền nghi ngờ, nhãn “các cửa sổ sau đều noise” chưa được xác nhận độc lập cho phiên mới. Không suy FPR/giờ từ tập ngắn này và không chọn ngưỡng bằng chỉ1 câu chào.
 - RTF DSP sơ bộ~0.026 trên Mac, không phảiCPU VPS. ASR gọi trên VPS nhưng DSP chạy local; chưa benchmark1/3/5 luồng DSP+ASR+TTS trên VPS, chưa có p95 latency tổng hợp.
@@ -82,7 +82,7 @@ Sau benchmark/CI/robot đạt mới đề xuất shadow rồi enforce. Nếu m�
 ## Việc tiếp theo
 
 1. Hoàn tất mixed-noise A/B, đối chiếu baseline và ghi chất lượng theo từng SNR; không trộn calibration/held-out.
-2. Kiểm tra CI Linux và đóng gói native. Thêm robot integration/nhãn câu ngắn thật; chưa thể chứng minh từ test synthetic.
+2. CI Linux đã đạt; build Docker/release bundle đầy đủ và thêm robot integration/nhãn câu ngắn thật; chưa thể chứng minh từ test synthetic.
 3. Xử lý các cửa sổ nền còn lọt mà không hy sinh lời nhỏ/câu ngắn; nếu RNNoise chưa đạt, đánh giá mức lọc/DeepFilterNet theo kế hoạch, không tự cài cả hai trên production.
 4. Đo trên VPS dưới tải thực, xem p95 và queue/drop; chỉ công bố số robot đồng thời đã đo.
 5. Chỉ merge/deploy khi được yêu cầu sau review; nghiệm thu và lưu run IDs/kết quả thực. Không thay firmware.
@@ -108,3 +108,10 @@ Bộ hiệu chỉnh/replay290 mẫu:30 FLEURS gốc,240 bản trộn cùng30 câ
 Kết luận: RNNoise có lợi trên một số tiếng va chạm và nền, nhưng không luôn cải thiện ASR; mọi nhóm giữ đủ câu, WER tăng nhiều nhất~0.86 điểm phần trăm. Đây là tập calibration có chung30 câu, chưa là kiểm định độc lập, chưa có200 câu ngắn. Không đổi default threshold lên.65 từ chỉ một bản ghi. Giữ off/shadow trước enforce.
 
 Dữ liệu riêng tại /tmp/xiaozhi-noise-mixed-20261124-v2 và /tmp/xiaozhi-gate-audio-20261124 trên máy làm việc; không có transcript/audio trong Git. Bộ v1 bị lỗi scale PCM int16 trong generator, không dùng kết quả; đã sửa scale theo32767 và thêm test kiểm chứng SNR/amplitude, giữ bản cũ để tra cứu thay vì xóa. Khi máy dọn /tmp cần lấy lại capture từ VPS và tạo suite mới; không coi đường dẫn tạm là bản lưu trữ dài hạn.
+
+## Kết thúc lượt code
+
+- Code commits5458b79f và72e2cf03 đã push origin/feat/backend-noise-suppression; chưa PR/merge production/deploy.
+- CI cuối45315184231 backend/frontend thành công; native tests/race chọn lọc, benchmark generator/config migration/full-script native-failure rollback, vet/build/self-check đã qua Linux. Các giới hạn vet/race cũ của ASR_INPUT_GATE.md vẫn áp dụng, không tuyên bố race toàn repo sạch.
+- VPS kiểm tra read-only vẫn healthy; SHA256 binary10ce67289f12961eda3f85bbb47e6feb4dbd8b800ec0bc4b4bb2546192ac717e không đổi. Chỉ gọi ASR qua tunnel để benchmark, không cài runtime/code mới lên VPS; tunnel đã đóng.
+- Người dùng đã được đề nghị cung cấp thời điểm/các câu thử ngắn; chưa có câu trả lời trong lượt này. Chưa gắn nhãn thêm audio hoặc xác nhận nghiệm thu mic thật. Giữ bộ lọc tắt cho đến bước kiểm chứng tiếp theo.

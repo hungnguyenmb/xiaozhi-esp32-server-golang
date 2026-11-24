@@ -98,7 +98,8 @@ Tests bắt buộc: ranh giới packet20/40/60 ms và chunk khác nhau cho kết
 - [x] Sửa FIFO/saturation có regression; duration32 ms ở pipeline mới, pipeline cũ vẫn theo packet.
 - [x] Benchmark RNNoise v0.1 pinned trên Mac, mixed290 mẫu; giữ thử nghiệm, chưa chốt enforce production.
 - [x] Tích hợp gate/candidate/pre-roll/endpoint, diagnostics và off/shadow/enforce.
-- [ ] Native/race local và CI Linux đầu đạt; còn CI bổ sung cuối và benchmark DSP trên VPS dưới tải ASR+TTS.
+- [x] Native/race local và CI Linux cuối45315184231 đạt (code72e2cf03).
+- [ ] Benchmark DSP trên VPS dưới tải ASR+TTS, câu ngắn/giọng nhỏ và nghiệm thu robot thật.
 - [ ] Shadow/enforce thử, nghiệm thu robot thật; deploy qua Actions khi có yêu cầu.
 
 Cập nhật file này cùng task.md/implementation_plan.md; sau code ghi BUG_LOG.md và DEPLOYMENT_LOG.md theo kết quả thực, ghi run ID/config/version và việc chưa xác minh. Không đưa secrets, audio, transcript cá nhân hoặc model weights lên Git. Không tự coi checklist dự kiến là công việc đã hoàn thành.
@@ -107,6 +108,6 @@ Cập nhật file này cùng task.md/implementation_plan.md; sau code ghi BUG_LO
 
 Đã tạo nhánh từ production06ab4ed7 và triển khai bản thử: TEN FIFO/saturation, RNNoise v0.1/SpeexDSP native streaming, frontend hop512/onset/pre-roll, off/shadow/enforce, reset/epoch/fallback và replay WAV/capture + ASR tùy chọn. Bypass mặc định, giữ speaker PCM raw và archive raw. Code giới hạn 16kHz mono/TEN với endpoint server; manual/AutoEnd/provider khác bypass có log. Noise floor thích nghi và DeepFilterNet chưa thêm vì chưa có bằng chứng cần thiết sau A/B.
 
-Đã qua local tests packages liên quan, race chọn lọc, vet và actionlint; CI Linux đang chuẩn bị. Đã A/B50 mẫu gồm30speech+20noise tổng hợp; tất cả speech mở lượt, noise không mở lượt với config thử .55/.35/.85. WER sơ bộ4.28% so raw Gipformer4.07%; chưa có đủ câu ngắn/người nói nhỏ. Capture còn cửa sổ nền mở lượt, vì vậy chưa đạt điều kiện enforce. Đọc báo cáo/usage hiện hành, không tự bật production từ các số sơ bộ này.
+Đã qua local tests packages liên quan, race chọn lọc, vet và actionlint; CI Linux cuối45315184231 đã thành công. Đã A/B50 mẫu gồm30speech+20noise tổng hợp; tất cả speech mở lượt, noise không mở lượt với config thử .55/.35/.85. WER sơ bộ4.28% so raw Gipformer4.07%; chưa có đủ câu ngắn/người nói nhỏ. Capture còn cửa sổ nền mở lượt, vì vậy chưa đạt điều kiện enforce. Đọc báo cáo/usage hiện hành, không tự bật production từ các số sơ bộ này.
 
-Cập nhật A/B:290 mẫu gồm30clean+240speech/noise mix+20noise, RNNoise không bỏ cả câu ở270 mẫu có lời,0/20noise mở lượt; WER theo nhóm ghi trong BACKEND_NOISE_SUPPRESSION.md. Còn câu ngắn/giọng nhỏ/người/phòng mới, các cửa sổ robot nhận nền và CPU/latency VPS; chưa đủ để phát hành enforce. CI đầu45314376269 thành công, chưa deploy.
+Cập nhật A/B:290 mẫu gồm30clean+240speech/noise mix+20noise, RNNoise không bỏ cả câu ở270 mẫu có lời,0/20noise mở lượt; WER theo nhóm ghi trong BACKEND_NOISE_SUPPRESSION.md. Còn câu ngắn/giọng nhỏ/người/phòng mới, các cửa sổ robot nhận nền và CPU/latency VPS; chưa đủ để phát hành enforce. CI đầu45314376269 và cuối45315184231 thành công, chưa deploy.

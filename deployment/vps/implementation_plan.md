@@ -1,3 +1,7 @@
+# Code lọc nhiễu đã kiểm thử — 2026-11-24
+
+Nhánh feat/backend-noise-suppression, code72e2cf03 đã push. CI Linux45315184231 backend/frontend thành công, local tests/race/vet/actionlint và mock rollback đạt. A/B290 mẫu hoàn tất, số đo theo nhóm tại BACKEND_NOISE_SUPPRESSION.md. Chưa merge/deploy; còn câu ngắn/giọng nhỏ/nhiễu phòng thật và tải DSP trên VPS, chưa đạt nghiệm thu enforce. Agent tiếp theo đọc báo cáo và kế hoạch trước thay đổi hoặc phát hành; giữ firmware và Gipformer.
+
 # Bàn giao code lọc nhiễu — 2026-11-24
 
 Nhánh feat/backend-noise-suppression, code/core+replay+native packaging đã có. A/B290 mẫu hoàn tất, không bỏ cả câu ở270 mẫu có lời nhưng chưa có đủ câu ngắn/giọng nhỏ; noise thật còn lọt. CI Linux đầu45314376269 đạt; đang chạy lại cho bổ sung diagnostics/self-check deploy/test generator. Chưa merge/deploy, giữ bộ lọc off. Xem BACKEND_NOISE_SUPPRESSION.md (số đo/commands/phần chưa đạt) và kế hoạch để tiếp tục. Không tự bật enforce chỉ vì test synthetic đạt.
