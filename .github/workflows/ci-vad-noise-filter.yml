@@ -2,7 +2,7 @@ name: VAD and ASR noise filter CI
 
 on:
   push:
-    branches: [feat/vad-noise-filter-271, feat/full-audio-capture, fix/asr-post-playback-gate, feat/backend-noise-suppression]
+    branches: [feat/vad-noise-filter-271, feat/full-audio-capture, fix/asr-post-playback-gate, feat/backend-noise-suppression, fix/tool-history-error-speech]
   pull_request:
     paths:
       - 'internal/app/server/chat/**'
@@ -53,10 +53,10 @@ jobs:
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/onnxruntime-linux-x64-1.21.0/lib:$GITHUB_WORKSPACE/lib/ten-vad/lib/Linux/x64" >> "$GITHUB_ENV"
       - name: Test affected packages on Linux with native TEN VAD
         run: |
-          go test -tags nolibopusfile -count=1 ./internal/domain/audio/denoise ./internal/domain/audio/frontend ./cmd/audio-frontend-replay ./internal/domain/vad/hysteresis ./internal/domain/vad/power ./internal/domain/vad/ten_vad ./internal/domain/vad/silero_vad ./internal/domain/chat/hooks ./internal/app/server/chat
-          go test -race -tags nolibopusfile -count=1 -run 'TestAudioInputGate|TestASRInputTurn' ./internal/data/client
+          go test -tags nolibopusfile -count=1 ./internal/domain/audio/denoise ./internal/domain/audio/frontend ./cmd/audio-frontend-replay ./internal/domain/vad/hysteresis ./internal/domain/vad/power ./internal/domain/vad/ten_vad ./internal/domain/vad/silero_vad ./internal/domain/chat/hooks ./internal/data/client ./internal/app/server/chat
+          go test -race -tags nolibopusfile -count=1 -run 'TestAudioInputGate|TestASRInputTurn|TestAlignToolMessages' ./internal/data/client
           go test -race -tags nolibopusfile -count=1 ./internal/domain/audio/capture ./cmd/audio-capture-export
-          go test -race -tags nolibopusfile -count=1 -run 'TestAudioPreprocess|TestAudioDiagnostics|TestAudioCapture|TestAudioInputGate|TestASRInputTurn' ./internal/app/server/chat
+          go test -race -tags nolibopusfile -count=1 -run 'TestAudioPreprocess|TestAudioDiagnostics|TestAudioCapture|TestAudioInputGate|TestASRInputTurn|TestLLMProviderErrorNever|TestLLMProviderStreamError|TestToolHistoryPersistence|TestGetMessagesRepairs' ./internal/app/server/chat
           go test -race -tags nolibopusfile -count=1 ./internal/domain/audio/denoise ./internal/domain/audio/frontend ./internal/domain/chat/hooks ./internal/domain/vad/hysteresis ./internal/domain/vad/ten_vad
       - name: Test replay benchmark tools
         run: |
