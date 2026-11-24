@@ -89,3 +89,7 @@ OnVoiceSilence reset VAD trước final offline làm voice_ms=0. Đã giữ snap
 ## 2026-11-24 — gate sau ASR rỗng
 
 Phát hiện khi rà soát release: endpoint đóng gate nhưng ASR rỗng không tạo TTS/listen-start nên retry phải tự mở lại. Đã dừng build 45225225393 trước deploy, bổ sung helper tái khởi tạo gate cùng provider và test ASR rỗng/failure; không để robot bị kẹt sau tiếng động không ra chữ.
+
+## 2026-11-24 — mẫu dư TEN và nhận nền sau gate (nhánh thử)
+
+TEN từng bỏ phần mẫu không đủ hop512 ở cuối mỗi packet; +1.0 float có thể wrap thành -32768. Đã thêm FIFO/reset/saturation và tests độc lập kích thước packet. Không coi đây là nguyên nhân duy nhất của robot tự trả lời: noise ngoài guard vẫn có thể vào ASR. Đã thêm preprocessing/onset thử nghiệm, mặc định tắt; cần benchmark/robot theo BACKEND_NOISE_SUPPRESSION.md trước phát hành.

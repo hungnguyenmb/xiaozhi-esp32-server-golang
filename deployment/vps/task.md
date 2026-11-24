@@ -1,3 +1,18 @@
+# Đang triển khai lọc nhiễu — 2026-11-24
+
+Nhánh feat/backend-noise-suppression từ production06ab4ed7. Đã có FIFO TEN, RNNoise/SpeexDSP, frontend onset/pre-roll, off/shadow/enforce, diagnostics, replay và benchmark harness. Test local đạt; đang A/B mixed speech+noise và chuẩn bị CI Linux. Chưa merge/deploy; chưa đạt nghiệm thu câu ngắn/robot thật. Đọc BACKEND_NOISE_SUPPRESSION.md và BACKEND_NOISE_SUPPRESSION_PLAN.md để tiếp tục; không tự bật enforce từ benchmark sơ bộ.
+
+# Lọc nhiễu backend — kế hoạch 2026-11-24
+
+Kế hoạch hiện hành: [BACKEND_NOISE_SUPPRESSION_PLAN.md](BACKEND_NOISE_SUPPRESSION_PLAN.md). Chỉ lập tài liệu, chưa code/deploy. Ưu tiên bảo toàn mẫu/FIFO, benchmark denoise CPU, xác nhận đầu câu có pre-roll và kiểm chứng câu ngắn/lời lẫn nhiễu; giữ firmware, Gipformer, gate và capture.
+
+# Kiểm tra robot tự trả lời — 2026-11-24
+
+- [x] Đối chiếu log/capture sau deploy gate: guard hoạt động, duration snapshot đúng; vẫn có false positives ngoài guard.
+- [x] Dò threshold offline, ghi giới hạn kiểm chứng trong ASR_INPUT_GATE.md; không đổi runtime.
+- [ ] Điều chỉnh VAD và kiểm chứng end-to-end, nhất là lời nói nhỏ/câu ngắn; phát hành qua Actions khi có thay đổi.
+- [ ] Nghiệm thu lại robot: hiện chưa hết tự trả lời.
+
 # Trạng thái ASR input gate — 2026-11-24
 
 - [x] Code gate/epoch/guard/snapshot và ưu tiên abort, giữ firmware.

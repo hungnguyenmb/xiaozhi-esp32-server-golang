@@ -20,3 +20,7 @@
 - Backend ASR gate: đọc `deployment/vps/ASR_INPUT_GATE.md`. Đã deploy backend gate qua Actions 45226377103, giữ firmware; frame có epoch, auto-resume guard và snapshot trước reset. Chưa coi hiệu quả robot thật đã được nghiệm thu; trạng thái phát hành ghi trong tài liệu này.
 
 - Backend gate hiện enabled=true/post_tts_guard_ms=300, capture/diagnostics giữ bật. CI/health/probe đạt, robot thật sau rollout còn chờ; đọc ASR_INPUT_GATE.md và không tự flash firmware/đổi model.
+
+- Kế hoạch lọc nhiễu backend ngày2026-11-24: deployment/vps/BACKEND_NOISE_SUPPRESSION_PLAN.md. Chưa code/deploy; giữ câu ngắn/lời nhỏ và speech+noise là tiêu chí bắt buộc. Đọc trước khi điều chỉnh VAD hoặc thêm denoiser; không chốt threshold0.6 từ replay đơn giản.
+
+- Đang triển khai nhánh feat/backend-noise-suppression: đọc deployment/vps/BACKEND_NOISE_SUPPRESSION.md (cấu hình off/shadow/enforce, native build, replay, số đo và phần chưa đạt) cùng kế hoạch. Chưa merge/deploy; không tự bật enforce hoặc đổi firmware.

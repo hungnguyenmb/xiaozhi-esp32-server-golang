@@ -174,3 +174,7 @@ Người dùng yêu cầu lưu đầy đủ, không chỉ VAD. Thêm capture Opu
 ## 2026-11-24 — triển khai backend input gate
 
 Code gate auto/epoch/guard, snapshot ASR trước reset và keyword abort giữ firmware. Test local/race chọn lọc đạt; trạng thái CI/phát hành và giới hạn trong ASR_INPUT_GATE.md. Chưa nghiệm thu robot thật ở mục ghi này.
+
+## 2026-11-24 — chuẩn bị code lọc nhiễu, chưa deploy
+
+Nhánh feat/backend-noise-suppression. Thêm build native RNNoise v0.1/SpeexDSP và đóng gói libs/license, CI Linux tests, input Actions audio_preprocess=unchanged/off/shadow/enforce và migration giữ config/permissions. Tests local config migration/bypass/shadow/native/frame boundaries đạt; chưa gọi Actions deploy, VPS giữ nguyên. Xem BACKEND_NOISE_SUPPRESSION.md để tiếp tục và xác minh CI/benchmark.

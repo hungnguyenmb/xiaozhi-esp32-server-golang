@@ -21,7 +21,7 @@ ENV GOOS=linux
 ENV GOARCH=amd64
 
 RUN apt-get update && apt-get install -y \
-    ca-certificates curl git wget build-essential pkg-config \
+    ca-certificates curl git wget build-essential pkg-config libspeexdsp1 \
     libc++-dev libc++abi-dev upx-ucl zip patchelf \
     && rm -rf /var/lib/apt/lists/*
 
@@ -37,6 +37,7 @@ RUN mkdir -p manager/backend/static/dist
 COPY --from=frontend /src/manager/frontend/dist /src/manager/backend/static/dist
 
 RUN test -f asr_server/server/setup.go
+RUN bash deployment/vps/build_rnnoise.sh /opt/xiaozhi-noise
 
 RUN wget -q "https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz" \
     && tar xf "opus-${OPUS_VERSION}.tar.gz" \
@@ -77,6 +78,9 @@ RUN PACK_DIR="/out/linux-amd64/xiaozhi_server-linux-amd64" \
     && mkdir -p "$PACK_DIR/ten-vad/lib/Linux/x64" "$PACK_DIR/logs" \
     && cp xiaozhi_server "$PACK_DIR/" \
     && patchelf --add-rpath '$ORIGIN/ten-vad/lib/Linux/x64' "$PACK_DIR/xiaozhi_server" 2>/dev/null || true \
+    && cp /opt/xiaozhi-noise/* "$PACK_DIR/ten-vad/lib/Linux/x64/" \
+    && cp /usr/lib/x86_64-linux-gnu/libspeexdsp.so.1 "$PACK_DIR/ten-vad/lib/Linux/x64/" \
+    && cp /usr/share/doc/libspeexdsp1/copyright "$PACK_DIR/ten-vad/lib/Linux/x64/SPEEXDSP-COPYRIGHT" \
     && cp build/linux/libten_vad.so "$PACK_DIR/ten-vad/lib/Linux/x64/" \
     && cp /opt/sherpa-onnx-go-linux/x86_64-unknown-linux-gnu/libsherpa-onnx-c-api.so "$PACK_DIR/ten-vad/lib/Linux/x64/" \
     && cp /opt/sherpa-onnx-go-linux/x86_64-unknown-linux-gnu/libsherpa-onnx-cxx-api.so "$PACK_DIR/ten-vad/lib/Linux/x64/" \

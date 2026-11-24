@@ -23,6 +23,7 @@ var defaultVADConfig = map[string]interface{}{
 type TenVAD struct {
 	diagnosticProbability      float32
 	diagnosticProbabilityValid bool
+	pending                    []int16
 	handle                     unsafe.Pointer
 	hopSize                    int
 	threshold                  float32
@@ -90,6 +91,9 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 		t.detector = hysteresis.NewDetector(t.threshold, t.thresholdLow)
 	}
 
+	if sampleRate != 16000 {
+		return false, fmt.Errorf("TEN-VAD requires 16000 Hz, got %d", sampleRate)
+	}
 	if len(pcmData) == 0 {
 		return false, nil
 	}
@@ -97,15 +101,8 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 	// 将 float32 转换为 int16
 	// float32 范围: -1.0 到 1.0
 	// int16 范围: -32768 到 32767
-	int16Data := make([]int16, len(pcmData))
-	for i, f := range pcmData {
-		// 限制范围并转换
-		if f > 1.0 {
-			f = 1.0
-		} else if f < -1.0 {
-			f = -1.0
-		}
-		int16Data[i] = int16(f * 32768.0)
+	for _, f := range pcmData {
+		t.pending = append(t.pending, pcmInt16(f))
 	}
 
 	// 按 hopSize 分帧处理
@@ -113,21 +110,11 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 	hasVoice := false
 	voiceFrameCount := 0
 
-	for i := 0; i < len(int16Data); i += t.hopSize {
-		end := i + t.hopSize
-		if end > len(int16Data) {
-			end = len(int16Data)
-		}
-
-		frame := int16Data[i:end]
-		// 如果帧长度不足 hopSize，需要填充或跳过
-		if len(frame) < t.hopSize {
-			// 对于最后一帧，如果长度不足，可以选择跳过或填充
-			// 这里选择跳过不足的帧
-			continue
-		}
+	for len(t.pending) >= t.hopSize {
+		frame := t.pending[:t.hopSize]
 
 		probability, _, err := tenVAD.ProcessAudio(t.handle, frame)
+		t.pending = t.pending[t.hopSize:]
 		if err != nil {
 			log.Errorf("TEN-VAD处理音频帧失败: %v", err)
 			continue
@@ -141,6 +128,7 @@ func (t *TenVAD) IsVADExt(pcmData []float32, sampleRate int, frameSize int) (boo
 		}
 	}
 
+	t.pending = append([]int16(nil), t.pending...)
 	// 如果至少有一帧检测到语音，则认为有语音活动
 	return hasVoice, nil
 }
@@ -165,6 +153,8 @@ func (t *TenVAD) Reset() error {
 		return fmt.Errorf("release previous TEN-VAD instance: %w", err)
 	}
 	t.handle = handle
+	t.pending = nil
+	t.diagnosticProbabilityValid = false
 	if t.detector != nil {
 		t.detector.Reset()
 	}
@@ -228,4 +218,18 @@ func (t *TenVAD) DiagnosticProbability() (float32, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.diagnosticProbability, t.diagnosticProbabilityValid
+}
+
+// Saturate +1.0 instead of wrapping it to -32768. Invalid input is silence.
+func pcmInt16(f float32) int16 {
+	if f != f {
+		return 0
+	}
+	if f >= 1 {
+		return 32767
+	}
+	if f <= -1 {
+		return -32768
+	}
+	return int16(f * 32768)
 }

@@ -140,8 +140,8 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 		// 从第一帧实际数据中获取帧大小和帧时长
 		var frameSize int
 		var inputEpoch uint64
+		var inputEpochInitialized bool
 		var frameDurationMs int
-		var vadNeedGetCount int // VAD需要的帧数，会在第一帧后计算
 
 		// VAD 资源改为懒加载 + 空闲释放，避免长期独占资源池实例。
 		var vadWrapper *pool.ResourceWrapper[inter.VAD]
@@ -163,6 +163,8 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 			log.Infof("AUDIO_DIAG setup device=%s session=%s provider=%s need_vad=%t listen_mode=%s asr_auto_end=%t realtime_mode=%d", state.DeviceID, state.SessionID, effectiveVadProviderName, needVad, state.ListenMode, state.Asr.AutoEnd, viper.GetInt("chat.realtime_mode"))
 		}
 		isSileroVAD := effectiveVadProviderName == "silero_vad"
+		preprocess := newAudioPreprocess(state.DeviceID, state.SessionID, audioFormat.SampleRate, audioFormat.Channels, int(state.SilenceThresholdTime), needVad && effectiveVadProviderName == "ten_vad")
+		defer preprocess.Close()
 		keepVadStateBetweenFrames := isSileroVAD || effectiveVadProviderName == "ten_vad"
 		releaseVad := func(reason string) {
 			if vadWrapper == nil {
@@ -225,8 +227,11 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					continue
 				}
 				opusFrame := inputFrame.Data
-				if inputEpoch != inputFrame.Epoch {
+				if !inputEpochInitialized || inputEpoch != inputFrame.Epoch {
+					inputEpochInitialized = true
 					inputEpoch = inputFrame.Epoch
+					preprocess.epoch = inputEpoch
+					preprocess.Reset()
 					releaseVad("listen_epoch_change")
 					state.AsrAudioBuffer.ClearAsrAudioData()
 					audioProcesser, err = audio.GetAudioProcesser(audioFormat.SampleRate, audioFormat.Channels, 20)
@@ -269,306 +274,336 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					continue
 				}
 
-				// 从实际解码后的数据动态计算帧大小和帧时长
-				if frameSize == 0 {
-					// 第一帧：从实际解码的数据计算帧信息
-					frameSize = n
-					samplesPerChannel := n / audioFormat.Channels
-					frameDurationMs = samplesPerChannel * 1000 / audioFormat.SampleRate
-					audioFormat.FrameDuration = frameDurationMs
-
-					// 计算 VAD 需要的帧数
-					vadNeedGetCount = 1
-					log.Debugf("从实际音频数据计算帧信息: frameSize=%d, frameDurationMs=%d, vadNeedGetCount=%d", frameSize, frameDurationMs, vadNeedGetCount)
+				preparedFrames, processErr := preprocess.Process(pcmFrame[:n])
+				if processErr != nil {
+					state.AudioInput.Block()
+					if err := restartASRInputForRetry(state, func() error { return a.RestartAsrRecognition(ctx) }); err != nil {
+						log.Errorf("AUDIO_PREPROCESS ASR retry failed: %v", err)
+					}
+					continue
 				}
+				for _, prepared := range preparedFrames {
+					if !state.AudioInput.Allows(inputFrame.Epoch) || state.GetClientVoiceStop() {
+						break
+					}
+					prepared = preprocess.Prepare(prepared)
+					n = len(prepared.PCM)
+					clientHaveVoice = state.GetClientHaveVoice()
+					if !skipVad {
+						haveVoice = false
+					}
+					// 从实际解码后的数据动态计算帧大小和帧时长
+					if frameSize == 0 {
+						// 第一帧：从实际解码的数据计算帧信息
+						frameSize = n
+						samplesPerChannel := n / audioFormat.Channels
+						frameDurationMs = samplesPerChannel * 1000 / audioFormat.SampleRate
+						audioFormat.FrameDuration = frameDurationMs
 
-				var vadPcmData []float32
-				pcmData := pcmFrame[:n]
-				speakerPcmData := pcmFrame[:n]
+						// 计算 VAD 需要的帧数
+						log.Debugf("audio frame: samples=%d duration_ms=%d", frameSize, frameDurationMs)
+					}
 
-				// 检查帧大小是否一致（正常情况下应该一致，但不一致时使用实际值）
-				if n != frameSize {
-					log.Debugf("帧大小不一致: 期望=%d, 实际=%d，使用实际值", frameSize, n)
-					// 重新计算这一帧的时长
-					samplesPerChannel := n / audioFormat.Channels
-					currentFrameDurationMs := samplesPerChannel * 1000 / audioFormat.SampleRate
-					frameSize = n
-					frameDurationMs = currentFrameDurationMs
-					audioFormat.FrameDuration = frameDurationMs
-				}
+					var vadPcmData []float32
+					pcmData := prepared.PCM
+					speakerPcmData := prepared.PCM
+					if prepared.custom {
+						speakerPcmData = prepared.raw
+					}
 
-				powerSkipped := !skipVad && needVad && shouldSkipSileroByPower(isSileroVAD, clientHaveVoice, pcmData)
-				vadCalled := false
-				if !skipVad && needVad {
-					if !powerSkipped {
-						if !ensureVad() {
-							continue
-						}
-						//decode opus to pcm
-						state.AsrAudioBuffer.AddAsrAudioData(pcmData)
+					// 检查帧大小是否一致（正常情况下应该一致，但不一致时使用实际值）
+					if n != frameSize {
+						log.Debugf("帧大小不一致: 期望=%d, 实际=%d，使用实际值", frameSize, n)
+						// 重新计算这一帧的时长
+						samplesPerChannel := n / audioFormat.Channels
+						currentFrameDurationMs := samplesPerChannel * 1000 / audioFormat.SampleRate
+						frameSize = n
+						frameDurationMs = currentFrameDurationMs
+						audioFormat.FrameDuration = frameDurationMs
+					}
 
-						// 计算 VAD 需要的最小数据量
-						vadNeedMinSize := frameSize
-
-						if state.AsrAudioBuffer.GetAsrDataSize() >= vadNeedMinSize {
-							if isSileroVAD {
-								vadPcmData = pcmData
-							} else {
-								vadPcmData = state.AsrAudioBuffer.GetAsrData(vadNeedGetCount, frameSize)
+					powerSkipped := !skipVad && needVad && shouldSkipSileroByPower(isSileroVAD, clientHaveVoice, pcmData)
+					vadCalled := false
+					if prepared.custom {
+						haveVoice = prepared.Voice
+						vadCalled = true
+						pcmData = prepared.turn.PCM
+					} else if !skipVad && needVad {
+						if !powerSkipped {
+							if !ensureVad() {
+								continue
+							}
+							//decode opus to pcm
+							if !clientHaveVoice {
+								state.AsrAudioBuffer.AddAsrAudioData(pcmData)
+								state.AsrAudioBuffer.KeepLastSamples(audioFormat.SampleRate*audioFormat.Channels*maxFirstSpeechPreAudioMs/1000 + len(pcmData))
 							}
 
-							//如果已经检测到语音, 则不进行vad检测, 直接将pcmData传给asr
-							// 使用循环外获取的VAD资源进行检测
-							if !keepVadStateBetweenFrames {
+							// 计算 VAD 需要的最小数据量
+							vadNeedMinSize := frameSize
+
+							if len(pcmData) >= vadNeedMinSize {
+								vadPcmData = pcmData
+
+								//如果已经检测到语音, 则不进行vad检测, 直接将pcmData传给asr
+								// 使用循环外获取的VAD资源进行检测
+								if !keepVadStateBetweenFrames {
+									vadLastUseAt = time.Now()
+									if err := vadProvider.Reset(); err != nil {
+										log.Errorf("重置vad失败: %v", err)
+										continue
+									}
+								}
+
+								// 进行VAD检测
 								vadLastUseAt = time.Now()
-								if err := vadProvider.Reset(); err != nil {
-									log.Errorf("重置vad失败: %v", err)
+								vadCalled = true
+								haveVoice, err = vadProvider.IsVADExt(vadPcmData, audioFormat.SampleRate, frameSize)
+								if err != nil {
+									log.Errorf("processAsrAudio VAD检测失败: %v", err)
 									continue
+								}
+
+								//首次触发识别到语音时,为了语音数据完整性 将vadPcmData赋值给pcmData, 之后的音频数据全部进入asr
+								if haveVoice && !clientHaveVoice {
+									//首次检测到语音时，最多只保留200ms的前静音数据
+									currentFrameSamples := len(pcmData)
+									allData := state.AsrAudioBuffer.GetAndClearAllData()
+									pcmData = trimFirstSpeechAudio(allData, currentFrameSamples, audioFormat.SampleRate, audioFormat.Channels)
+								}
+							}
+						}
+						//log.Debugf("isVad, pcmData len: %d, vadPcmData len: %d, haveVoice: %v", len(pcmData), len(vadPcmData), haveVoice)
+					}
+
+					if !state.AudioInput.Allows(inputFrame.Epoch) {
+						releaseVad("stale_listen_epoch")
+						state.AsrAudioBuffer.ClearAsrAudioData()
+						continue
+					}
+					diagnosticProvider := any(vadProvider)
+					if prepared.custom {
+						diagnosticProvider = prepared
+					}
+					diagnostics.observe(prepared.PCM, haveVoice, vadCalled, powerSkipped && !skipVad && needVad, diagnosticProvider, frameDurationMs, effectiveVadProviderName)
+					if haveVoice {
+						hasLoggedFirstTextExtendedWait = false
+						//log.Infof("检测到语音, len: %d", len(pcmData))
+						state.SetClientHaveVoice(true)
+						state.SetClientHaveVoiceLastTime(time.Now().UnixMilli())
+						state.Vad.ResetIdleDuration()
+						// 累积检测到声音的时长（同时更新一次过程中的时长）
+						state.Vad.AddVoiceDuration(int64(frameDurationMs))
+
+						continuousVoiceDuration := state.Vad.GetVoiceContinuousDuration()
+						if state.IsRealTime() && viper.GetInt("chat.realtime_mode") == 1 && continuousVoiceDuration > 360 {
+							// 只有在未触发过的情况下才执行，确保只执行一次
+							if !hasTriggeredCancel {
+								if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
+									log.Debugf("设备 %s realtime媒体播放门控激活，跳过VAD打断", state.DeviceID)
+									hasTriggeredCancel = true
+								} else {
+									//realtime模式下, 如果此时有正在进行的llm和tts则取消掉
+									log.Debugf("realtime模式vad打断下 && 语音时长超过%d ms 如果此时有正在进行的llm和tts则取消掉", continuousVoiceDuration)
+									if a.session != nil {
+										a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.ProcessVadAudio realtime_mode=1 VAD interrupt")
+									} else {
+										state.AfterAsrSessionCtx.CancelWithReason("ASRManager.ProcessVadAudio: realtime_mode=1 VAD interrupt")
+									}
+									hasTriggeredCancel = true // 标记为已触发
+								}
+							}
+						}
+					} else {
+						state.Vad.AddIdleDuration(int64(frameDurationMs))
+						state.Vad.ResetVoiceContinuousDuration()
+
+						// 没有声音时，如果之前也没有语音，则重置累积的声音时长
+						// 如果之前有语音但本次没有，保留时长值，让后续逻辑判断是否应该重置
+						if !clientHaveVoice {
+							speakerInterruptTriggered.Store(false)
+							lastSpeakerPeekDoneAt.Store(0)
+							speakerPeekAudioMs = 0
+							//保留近10帧
+							/*
+								if state.AsrAudioBuffer.GetFrameCount(frameSize) > vadNeedGetCount*3 {
+									state.AsrAudioBuffer.RemoveAsrAudioData(1, frameSize)
+								}*/
+							continue
+						}
+					}
+
+					if clientHaveVoice || haveVoice {
+						// 首次命中语音时也要立刻转发当前缓存帧，避免极短语音整段未送入 ASR。
+
+						//vad识别成功, 往asr音频通道里发送数据
+						//log.Infof("vad识别成功, 往asr音频通道里发送数据, len: %d", len(pcmData))
+						if !state.AudioInput.Forward(inputFrame.Epoch, func() { state.Asr.AddAudioData(pcmData) }) {
+							continue
+						}
+
+						// 声纹只接收当前判定为有声的帧，避免将首段前导静音和尾静音送入识别流。
+						if haveVoice &&
+							state.IsSpeakerEnabled() && state.HasSpeakerGroups() &&
+							a.session != nil && a.session.speakerManager != nil {
+							// 首次检测到语音时，启动流式识别
+							if !a.session.speakerManager.IsActive() {
+								sampleRate := audioFormat.SampleRate
+								agentId := a.session.clientState.AgentID
+								if err := a.session.speakerManager.StartStreaming(ctx, sampleRate, agentId); err != nil {
+									log.Warnf("启动声纹识别流失败: %v", err)
+								} else {
+									speakerInterruptTriggered.Store(false)
+									lastSpeakerPeekDoneAt.Store(0)
+									speakerPeekAudioMs = 0
 								}
 							}
 
-							// 进行VAD检测
-							vadLastUseAt = time.Now()
-							vadCalled = true
-							haveVoice, err = vadProvider.IsVADExt(vadPcmData, audioFormat.SampleRate, frameSize)
-							if err != nil {
-								log.Errorf("processAsrAudio VAD检测失败: %v", err)
+							// 发送音频块
+							if err := a.session.speakerManager.SendAudioChunk(ctx, speakerPcmData); err != nil {
+								log.Warnf("发送音频块到声纹识别服务失败: %v", err)
+							} else if a.session.speakerManager.IsActive() {
+								if audioFormat.Channels > 0 && audioFormat.SampleRate > 0 {
+									speakerPeekAudioMs += int64(len(speakerPcmData)/audioFormat.Channels) * 1000 / int64(audioFormat.SampleRate)
+								}
+
+								if state.IsRealTime() &&
+									viper.GetInt("chat.realtime_mode") == 3 &&
+									!speakerInterruptTriggered.Load() &&
+									speakerPeekAudioMs >= firstSpeakerPeekAudioThresholdMs {
+									now := time.Now()
+									lastDoneAt := lastSpeakerPeekDoneAt.Load()
+									if (lastDoneAt <= 0 || now.Sub(time.Unix(0, lastDoneAt)) >= speakerPeekInterval) &&
+										speakerPeekInFlight.CompareAndSwap(false, true) {
+										reqSeq := atomic.AddUint64(&speakerPeekRequestSeq, 1)
+										requestID := fmt.Sprintf("peek_%d_%d", now.UnixMilli(), reqSeq)
+
+										go func(reqID string) {
+											defer func() {
+												lastSpeakerPeekDoneAt.Store(time.Now().UnixNano())
+												speakerPeekInFlight.Store(false)
+											}()
+
+											if a.session == nil || a.session.speakerManager == nil || !a.session.speakerManager.IsActive() {
+												return
+											}
+
+											peekCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+											defer cancel()
+
+											peekResult, throttled, err := a.session.speakerManager.PeekAndIdentify(peekCtx, reqID)
+											if err != nil {
+												if ctx.Err() == nil {
+													log.Debugf("声纹peek失败: device=%s, request_id=%s, err=%v", state.DeviceID, reqID, err)
+												}
+												return
+											}
+											if throttled {
+												return
+											}
+											if peekResult == nil || !peekResult.Identified {
+												return
+											}
+											if !speakerInterruptTriggered.CompareAndSwap(false, true) {
+												return
+											}
+
+											log.Infof(
+												"realtime模式声纹peek命中，立即打断: device=%s, speaker=%s, confidence=%.4f, threshold=%.4f",
+												state.DeviceID,
+												peekResult.SpeakerName,
+												peekResult.Confidence,
+												peekResult.Threshold,
+											)
+											if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
+												log.Debugf("设备 %s realtime媒体播放门控激活，跳过speaker peek打断", state.DeviceID)
+												return
+											}
+											a.session.MarkTurnSpeakerInterrupted()
+											if a.session != nil {
+												a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.ProcessVadAudio realtime_mode=3 speaker peek interrupt")
+											} else {
+												state.AfterAsrSessionCtx.CancelWithReason("ASRManager.ProcessVadAudio: realtime_mode=3 speaker peek interrupt")
+											}
+										}(requestID)
+									}
+								}
+							}
+						}
+					}
+
+					//已经有语音了, 但本次没有检测到语音, 则需要判断是否已经停止说话
+					lastHaveVoiceTime := state.GetClientHaveVoiceLastTime()
+
+					if clientHaveVoice && lastHaveVoiceTime > 0 && !haveVoice {
+						// 判断有音频的语音时长，如果小于300ms则重置clientHaveVoice，避免短时间语音造成的误判
+						voiceDurationInSession := state.Vad.GetVoiceDurationInSession()
+						if voiceDurationInSession < 100 && !prepared.custom {
+							diagnostics.event("short_voice_rejected", voiceDurationInSession, state.Vad.GetIdleDuration())
+							log.Debugf("语音时长过短 (%dms < 100ms)，重置clientHaveVoice", voiceDurationInSession)
+							state.SetClientHaveVoice(false)
+							state.Vad.ResetVoiceDuration()
+							speakerInterruptTriggered.Store(false)
+							lastSpeakerPeekDoneAt.Store(0)
+							speakerPeekAudioMs = 0
+							continue
+						}
+
+						idleDuration := state.Vad.GetIdleDuration()
+						if state.IsRealTime() && !state.Asr.HasReceivedText() {
+							preTextSilenceDuration := state.GetPreAsrTextSilenceDuration()
+							if idleDuration <= preTextSilenceDuration {
+								log.Debugf(
+									"realtime模式尚未收到ASR首文本，延迟按静音阈值收口: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
+									state.Status,
+									idleDuration,
+									preTextSilenceDuration,
+									state.Vad.GetVoiceDuration(),
+									voiceDurationInSession,
+									state.Asr.GetHistoryAudioLen(),
+								)
 								continue
 							}
 
-							//首次触发识别到语音时,为了语音数据完整性 将vadPcmData赋值给pcmData, 之后的音频数据全部进入asr
-							if haveVoice && !clientHaveVoice {
-								//首次检测到语音时，最多只保留200ms的前静音数据
-								currentFrameSamples := len(pcmData)
-								allData := state.AsrAudioBuffer.GetAndClearAllData()
-								pcmData = trimFirstSpeechAudio(allData, currentFrameSamples, audioFormat.SampleRate, audioFormat.Channels)
+							if !hasLoggedFirstTextExtendedWait {
+								log.Debugf(
+									"realtime模式静音超时且仍未收到ASR文本，继续保持当前ASR流并转发音频: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
+									state.Status,
+									idleDuration,
+									preTextSilenceDuration,
+									state.Vad.GetVoiceDuration(),
+									voiceDurationInSession,
+									state.Asr.GetHistoryAudioLen(),
+								)
+								hasLoggedFirstTextExtendedWait = true
 							}
-						}
-					}
-					//log.Debugf("isVad, pcmData len: %d, vadPcmData len: %d, haveVoice: %v", len(pcmData), len(vadPcmData), haveVoice)
-				}
-
-				if !state.AudioInput.Allows(inputFrame.Epoch) {
-					releaseVad("stale_listen_epoch")
-					state.AsrAudioBuffer.ClearAsrAudioData()
-					continue
-				}
-				diagnostics.observe(pcmFrame[:n], haveVoice, vadCalled, powerSkipped && !skipVad && needVad, vadProvider, frameDurationMs, effectiveVadProviderName)
-				if haveVoice {
-					hasLoggedFirstTextExtendedWait = false
-					//log.Infof("检测到语音, len: %d", len(pcmData))
-					state.SetClientHaveVoice(true)
-					state.SetClientHaveVoiceLastTime(time.Now().UnixMilli())
-					state.Vad.ResetIdleDuration()
-					// 累积检测到声音的时长（同时更新一次过程中的时长）
-					state.Vad.AddVoiceDuration(int64(frameDurationMs))
-
-					continuousVoiceDuration := state.Vad.GetVoiceContinuousDuration()
-					if state.IsRealTime() && viper.GetInt("chat.realtime_mode") == 1 && continuousVoiceDuration > 360 {
-						// 只有在未触发过的情况下才执行，确保只执行一次
-						if !hasTriggeredCancel {
-							if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
-								log.Debugf("设备 %s realtime媒体播放门控激活，跳过VAD打断", state.DeviceID)
-								hasTriggeredCancel = true
-							} else {
-								//realtime模式下, 如果此时有正在进行的llm和tts则取消掉
-								log.Debugf("realtime模式vad打断下 && 语音时长超过%d ms 如果此时有正在进行的llm和tts则取消掉", continuousVoiceDuration)
-								if a.session != nil {
-									a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.ProcessVadAudio realtime_mode=1 VAD interrupt")
-								} else {
-									state.AfterAsrSessionCtx.CancelWithReason("ASRManager.ProcessVadAudio: realtime_mode=1 VAD interrupt")
-								}
-								hasTriggeredCancel = true // 标记为已触发
-							}
-						}
-					}
-				} else {
-					state.Vad.AddIdleDuration(int64(frameDurationMs))
-					state.Vad.ResetVoiceContinuousDuration()
-
-					// 没有声音时，如果之前也没有语音，则重置累积的声音时长
-					// 如果之前有语音但本次没有，保留时长值，让后续逻辑判断是否应该重置
-					if !clientHaveVoice {
-						speakerInterruptTriggered.Store(false)
-						lastSpeakerPeekDoneAt.Store(0)
-						speakerPeekAudioMs = 0
-						//保留近10帧
-						/*
-							if state.AsrAudioBuffer.GetFrameCount(frameSize) > vadNeedGetCount*3 {
-								state.AsrAudioBuffer.RemoveAsrAudioData(1, frameSize)
-							}*/
-						continue
-					}
-				}
-
-				if clientHaveVoice || haveVoice {
-					// 首次命中语音时也要立刻转发当前缓存帧，避免极短语音整段未送入 ASR。
-
-					//vad识别成功, 往asr音频通道里发送数据
-					//log.Infof("vad识别成功, 往asr音频通道里发送数据, len: %d", len(pcmData))
-					if !state.AudioInput.Forward(inputFrame.Epoch, func() { state.Asr.AddAudioData(pcmData) }) {
-						continue
-					}
-
-					// 声纹只接收当前判定为有声的帧，避免将首段前导静音和尾静音送入识别流。
-					if haveVoice &&
-						state.IsSpeakerEnabled() && state.HasSpeakerGroups() &&
-						a.session != nil && a.session.speakerManager != nil {
-						// 首次检测到语音时，启动流式识别
-						if !a.session.speakerManager.IsActive() {
-							sampleRate := audioFormat.SampleRate
-							agentId := a.session.clientState.AgentID
-							if err := a.session.speakerManager.StartStreaming(ctx, sampleRate, agentId); err != nil {
-								log.Warnf("启动声纹识别流失败: %v", err)
-							} else {
-								speakerInterruptTriggered.Store(false)
-								lastSpeakerPeekDoneAt.Store(0)
-								speakerPeekAudioMs = 0
-							}
-						}
-
-						// 发送音频块
-						if err := a.session.speakerManager.SendAudioChunk(ctx, speakerPcmData); err != nil {
-							log.Warnf("发送音频块到声纹识别服务失败: %v", err)
-						} else if a.session.speakerManager.IsActive() {
-							if audioFormat.Channels > 0 && audioFormat.SampleRate > 0 {
-								speakerPeekAudioMs += int64(len(speakerPcmData)/audioFormat.Channels) * 1000 / int64(audioFormat.SampleRate)
-							}
-
-							if state.IsRealTime() &&
-								viper.GetInt("chat.realtime_mode") == 3 &&
-								!speakerInterruptTriggered.Load() &&
-								speakerPeekAudioMs >= firstSpeakerPeekAudioThresholdMs {
-								now := time.Now()
-								lastDoneAt := lastSpeakerPeekDoneAt.Load()
-								if (lastDoneAt <= 0 || now.Sub(time.Unix(0, lastDoneAt)) >= speakerPeekInterval) &&
-									speakerPeekInFlight.CompareAndSwap(false, true) {
-									reqSeq := atomic.AddUint64(&speakerPeekRequestSeq, 1)
-									requestID := fmt.Sprintf("peek_%d_%d", now.UnixMilli(), reqSeq)
-
-									go func(reqID string) {
-										defer func() {
-											lastSpeakerPeekDoneAt.Store(time.Now().UnixNano())
-											speakerPeekInFlight.Store(false)
-										}()
-
-										if a.session == nil || a.session.speakerManager == nil || !a.session.speakerManager.IsActive() {
-											return
-										}
-
-										peekCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-										defer cancel()
-
-										peekResult, throttled, err := a.session.speakerManager.PeekAndIdentify(peekCtx, reqID)
-										if err != nil {
-											if ctx.Err() == nil {
-												log.Debugf("声纹peek失败: device=%s, request_id=%s, err=%v", state.DeviceID, reqID, err)
-											}
-											return
-										}
-										if throttled {
-											return
-										}
-										if peekResult == nil || !peekResult.Identified {
-											return
-										}
-										if !speakerInterruptTriggered.CompareAndSwap(false, true) {
-											return
-										}
-
-										log.Infof(
-											"realtime模式声纹peek命中，立即打断: device=%s, speaker=%s, confidence=%.4f, threshold=%.4f",
-											state.DeviceID,
-											peekResult.SpeakerName,
-											peekResult.Confidence,
-											peekResult.Threshold,
-										)
-										if a.session != nil && a.session.isRealtimeMcpAudioGateActive() {
-											log.Debugf("设备 %s realtime媒体播放门控激活，跳过speaker peek打断", state.DeviceID)
-											return
-										}
-										a.session.MarkTurnSpeakerInterrupted()
-										if a.session != nil {
-											a.session.StopAssistantOutputAfterAsrWithReason(true, "ASRManager.ProcessVadAudio realtime_mode=3 speaker peek interrupt")
-										} else {
-											state.AfterAsrSessionCtx.CancelWithReason("ASRManager.ProcessVadAudio: realtime_mode=3 speaker peek interrupt")
-										}
-									}(requestID)
-								}
-							}
-						}
-					}
-				}
-
-				//已经有语音了, 但本次没有检测到语音, 则需要判断是否已经停止说话
-				lastHaveVoiceTime := state.GetClientHaveVoiceLastTime()
-
-				if clientHaveVoice && lastHaveVoiceTime > 0 && !haveVoice {
-					// 判断有音频的语音时长，如果小于300ms则重置clientHaveVoice，避免短时间语音造成的误判
-					voiceDurationInSession := state.Vad.GetVoiceDurationInSession()
-					if voiceDurationInSession < 100 {
-						diagnostics.event("short_voice_rejected", voiceDurationInSession, state.Vad.GetIdleDuration())
-						log.Debugf("语音时长过短 (%dms < 300ms)，重置clientHaveVoice", voiceDurationInSession)
-						state.SetClientHaveVoice(false)
-						state.Vad.ResetVoiceDuration()
-						speakerInterruptTriggered.Store(false)
-						lastSpeakerPeekDoneAt.Store(0)
-						speakerPeekAudioMs = 0
-						continue
-					}
-
-					idleDuration := state.Vad.GetIdleDuration()
-					if state.IsRealTime() && !state.Asr.HasReceivedText() {
-						preTextSilenceDuration := state.GetPreAsrTextSilenceDuration()
-						if idleDuration <= preTextSilenceDuration {
-							log.Debugf(
-								"realtime模式尚未收到ASR首文本，延迟按静音阈值收口: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
-								state.Status,
-								idleDuration,
-								preTextSilenceDuration,
-								state.Vad.GetVoiceDuration(),
-								voiceDurationInSession,
-								state.Asr.GetHistoryAudioLen(),
-							)
 							continue
 						}
 
-						if !hasLoggedFirstTextExtendedWait {
+						if (prepared.custom && prepared.turn.Ended) || (!prepared.custom && state.IsSilence(idleDuration)) { // endpoint
+							diagnostics.event("silence_end", voiceDurationInSession, idleDuration)
 							log.Debugf(
-								"realtime模式静音超时且仍未收到ASR文本，继续保持当前ASR流并转发音频: status=%s, idle=%dms, pre_text_timeout=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d",
+								"判定语音结束，准备停止ASR: status=%s, idle=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d, pending_restart=%v",
 								state.Status,
 								idleDuration,
-								preTextSilenceDuration,
 								state.Vad.GetVoiceDuration(),
-								voiceDurationInSession,
+								state.Vad.GetVoiceDurationInSession(),
 								state.Asr.GetHistoryAudioLen(),
+								state.AudioIdleTimeoutPending(),
 							)
-							hasLoggedFirstTextExtendedWait = true
+							// 在 OnVoiceSilence 之前重置标志位，以便下次可以再次触发
+							hasTriggeredCancel = false
+							speakerInterruptTriggered.Store(false)
+							lastSpeakerPeekDoneAt.Store(0)
+							speakerPeekAudioMs = 0
+							preprocess.EndTurn()
+							state.OnVoiceSilence()
+							//state.VoiceStatus.Reset()
+							continue
 						}
-						continue
 					}
 
-					if state.IsSilence(idleDuration) { //从有声音到 静默的判断
-						diagnostics.event("silence_end", voiceDurationInSession, idleDuration)
-						log.Debugf(
-							"判定语音结束，准备停止ASR: status=%s, idle=%dms, voice_duration=%dms, voice_duration_in_session=%dms, history_audio_samples=%d, pending_restart=%v",
-							state.Status,
-							idleDuration,
-							state.Vad.GetVoiceDuration(),
-							state.Vad.GetVoiceDurationInSession(),
-							state.Asr.GetHistoryAudioLen(),
-							state.AudioIdleTimeoutPending(),
-						)
-						// 在 OnVoiceSilence 之前重置标志位，以便下次可以再次触发
-						hasTriggeredCancel = false
-						speakerInterruptTriggered.Store(false)
-						lastSpeakerPeekDoneAt.Store(0)
-						speakerPeekAudioMs = 0
-						state.OnVoiceSilence()
-						//state.VoiceStatus.Reset()
-						continue
-					}
-				}
+				} // prepared native windows
 
 			case <-ctx.Done():
 				return
