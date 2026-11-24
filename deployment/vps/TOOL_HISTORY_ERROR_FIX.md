@@ -1,3 +1,7 @@
+# Đã phát hành sửa lịch sử tool/error speech — 2026-11-24
+
+PR19 đã merge production27e0b975, Actions45322232698 deploy thành công. Backend healthy/restarts0; HTTP/native/TLS/OTA/WSS/admin PASS. Cấu hình SHA672a0db8… không đổi, noise=enforce/gate300 ms/capture/diagnostics giữ nguyên. CI Linux push45321517370 và PR45321746615 đạt. Chờ người dùng thử robot thật; false positives âm thanh chưa thuộc bản sửa này. Đọc TOOL_HISTORY_ERROR_FIX.md để tiếp tục và xem giới hạn kiểm chứng; các trạng thái chờ phát hành phía dưới là lịch sử.
+
 # Sửa lịch sử tool và chặn lỗi kỹ thuật ra loa — 2026-11-24
 
 Người dùng đã yêu cầu sửa, merge/deploy qua GitHub Actions để thử lại. Nhánh fix/tool-history-error-speech từ production9e7f3ee9, mang theo báo cáo NOISE_ROBOT_TEST_20261124.md của nhánh tài liệu. Không đổi noise frontend/ngưỡng/enforce, firmware, model hoặc dữ liệu thiết bị; không xóa lịch sử/ghi âm.
@@ -29,3 +33,15 @@ Trạng thái: code/regression local đã có, chuẩn bị CI Linux; chưa merg
 Robot thật: khởi động lại/kết nối lại, nói một câu chào để phát sinh persona/emotion tools; kiểm tra không còn400 lặp và không đọc raw error/call IDs. Thử một câu tiếp để xác nhận session không bị kẹt. Theo dõi đa tool có đủtool responses/ID riêng trong DB mà không in transcript/call payload/secrets lên Git. Không coi health probe là nghiệm thu MCP trên firmware thật.
 
 False positive tiếng động thành từ ngắn vẫn chưa sửa trong scope này. Giữ capture/metadata cho agent tiếp tục theo BACKEND_NOISE_SUPPRESSION.md và NOISE_ROBOT_TEST_20261124.md. Rollback code qua Actions theo DEPLOYMENT_GUIDE.md nếu có regression; không xóa history/audio và không đổi firmware.
+
+## Phát hành và xác minh VPS — 2026-11-24, khoảng10:54–10:55 UTC+7
+
+- Codec26f3a65445cc977c42ca0b4f4a728a6abc93ab4; [CI push45321517370](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45321517370) và [CI PR45321746615](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45321746615) đều thành công backend/frontend. Có full client/chat, các regression/race mới, vet/build/native check.
+- [PR19](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/pull/19) merge production27e0b975f672236238656782d32a41ee894c4d85; [Actions45322232698](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45322232698) push production thành công, mọi audio input mặc địnhunchanged. Không deploy thủ công qua SSH.
+- Binary SHA256 mới d3b12bc701b14775c40716e7e8c4d5fe8064d9f77d04dddb4bee49f55ec80980; image sha256:0ea92434dd89d1c29bd6ecc8a143c74cd47b4640b4af7601ce970b586d3c4e31.
+- Config SHA256 trước/sau giống hệt672a0db82d68ce864ec150facbcbf4c970932a09fbba7deb3f51e6072482b45f; UID/GID10001:10001/mode0600. Runtime audio_preprocess.mode=enforce, gate enabled/guard300 ms, diagnostics enabled/interval1000 ms và capture enabled giữ nguyên. Không thay ASR/LLM/TTS provider/firmware hay lịch sử.
+- Actions HTTP health/native RNNoise/SpeexDSP/TEN self-check PASS. Docker ban đầu starting theo chu kỳ healthcheck, sau đó healthy/restarts0 với exit0. ASR/TTS/gateway không restart; admin HTTPS200, verify_tls.py PASS TLS/OTA/WSS/auth401/internal404/redirect308.
+- Không thấy lỗi tool_calls-order/panic/preprocess-bypass trong log container mới ở thời điểm chốt. Tuy nhiên probe chỉ hello, chưa có cuộc gọi đa MCP tool của robot thật sau deploy; không coi việc chưa thấy400 là nghiệm thu firmware/tool-round thật. Người dùng cần nói lại câu chào/câu tiếp, cung cấp thời điểm nếu lỗi để đối chiếu.
+- Bản trước: binary9ec6839f5edc5b3f98c89bec5d414ead71c997b1f6055a14babd6c5445db86fe, image sha256:d07d60d8d352dc4627a03b399b72b1b230f0199dc189cf811b8c3cdb0b31aa87. Rollback theo Actions/DEPLOYMENT_GUIDE.md nếu regression, giữ config/audio/history. Không tự xóa tool records hoặc chạy lại action robot để khôi phục những kết quả cũ bị ID collision.
+
+Bàn giao: lỗi thứ tự multi-tool/ID và provider error ra loa đã có code/regression/deploy; kiểm chứng mic/MCP thật còn chờ. Bước tiếp theo về tiếng động thành từ ngắn vẫn theo NOISE_ROBOT_TEST_20261124.md và BACKEND_NOISE_SUPPRESSION.md, không nâng ngưỡng hoặc blacklist từ chỉ dựa trên bản sửa này.

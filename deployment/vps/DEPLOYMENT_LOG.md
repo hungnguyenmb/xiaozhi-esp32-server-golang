@@ -190,3 +190,7 @@ PR17 merge production5d5cceb6. Actions45316196051 thành công với audio_prepr
 ## 2026-11-24 — chuẩn bị deploy sửa tool history/error speech
 
 Nhánh fix/tool-history-error-speech. Không đổi cấu hình/provider/audio pipeline. Sau CI sẽ merge production/deploy bằng Actions với audio inputs unchanged theo yêu cầu người dùng. Chi tiết kiểm thử/run/rollback tại TOOL_HISTORY_ERROR_FIX.md; mục này chưa xác nhận release thành công.
+
+## 2026-11-24 — phát hành sửa tool history/error speech
+
+PR19 merge production27e0b975; Actions45322232698 thành công sau CI45321517370/45321746615. Binaryd3b12bc7…, Dockerhealthy/restarts0, native/HTTP/TLS/OTA/WSS/admin PASS. ConfigSHA672a0db8…/owner/mode giống trước deploy; noiseenforce/gate300 ms/capture/diagnostics giữ nguyên. Giữ firmware/models/history; còn thử robot đa tool và xử lý nhận nhầm tiếng động. Chi tiết SHA/image/rollback và giới hạn tại TOOL_HISTORY_ERROR_FIX.md.

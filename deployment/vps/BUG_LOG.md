@@ -105,3 +105,5 @@ Sau enforce, native pipeline hoạt động nhưng VAD vẫn nhận nền (score
 ## 2026-11-24 — bản sửa multi-tool/error speech (chờ release)
 
 Regression xác nhận AlignToolMessages nhân đôi assistant và mượn responses qua turn khác; MessageID millisecond trùng20 tool messages còn1ID; provider error bị đưa thẳng vào text/TTS. Đã sửa theo contiguous round, UUID32 cho bản ghi mới và empty-end khi lỗi. Tests client/chat/race chọn lọc local đạt; CI/deploy còn chờ. Xem TOOL_HISTORY_ERROR_FIX.md, gồm giới hạn test Eino cũ và việc false-positive audio chưa sửa.
+
+Bản sửa trên đã phát hành PR19/Actions45322232698 (2026-11-24), CI Linux đạt, health/native/public endpoints đạt. Chưa có nghiệm thu robot thật sau deploy; raw diagnostic/audio/DB cũ không bị xóa. Xem TOOL_HISTORY_ERROR_FIX.md để đối chiếu bản phát hành và lỗi tiếng nền còn lại.

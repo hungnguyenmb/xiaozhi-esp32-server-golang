@@ -1,3 +1,7 @@
+# Đã phát hành sửa lịch sử tool/error speech — 2026-11-24
+
+PR19 đã merge production27e0b975, Actions45322232698 deploy thành công. Backend healthy/restarts0; HTTP/native/TLS/OTA/WSS/admin PASS. Cấu hình SHA672a0db8… không đổi, noise=enforce/gate300 ms/capture/diagnostics giữ nguyên. CI Linux push45321517370 và PR45321746615 đạt. Chờ người dùng thử robot thật; false positives âm thanh chưa thuộc bản sửa này. Đọc TOOL_HISTORY_ERROR_FIX.md để tiếp tục và xem giới hạn kiểm chứng; các trạng thái chờ phát hành phía dưới là lịch sử.
+
 # Code sửa tool history/error speech đã qua local — 2026-11-24
 
 Nhánh fix/tool-history-error-speech. Regression trước sửa đã tái hiện; sau sửa full client/chat tests, race chọn lọc, vet theo scope và actionlint đạt. Chờ CI Linux, merge/deploy Actions giữ nguyên audio inputs. Theo dõi TOOL_HISTORY_ERROR_FIX.md; false positives âm thanh chưa thuộc bản sửa này.
