@@ -1,3 +1,7 @@
+## Lọc nhiễu backend (thử robot từ 2026-11-24)
+
+Xem [hướng dẫn, số đo và phát hành](deployment/vps/BACKEND_NOISE_SUPPRESSION.md). PR17/Actions45316196051 đã bật runtime audio_preprocess=enforce theo yêu cầu người dùng. Input Actions audio_preprocess hỗ trợ unchanged/off/shadow/enforce; chỉ từ production, inputs audio khác để unchanged nếu không cần đổi. Workflow đóng gói native libs/license và chạy native self-check khi bật; lỗi health/native sẽ rollback binary/config. Code mặc định off khi không có cấu hình, nhưng runtime hiện đang enforce để nghiệm thu mic thật.
+
 ## Tích hợp VAD/ASR PR #271
 
 Xem [kế hoạch kiểm tra và phát hành](deployment/vps/PR271_INTEGRATION.md). Đã triển khai ngày 2026-11-23 qua GitHub Actions; xem kết quả trong AUDIO_DIAGNOSTICS.md. YAML runtime cũ cần migration chọn lọc để bật noise filter, không chép đè secrets hoặc đổi Gipformer.

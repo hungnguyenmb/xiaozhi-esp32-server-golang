@@ -1,3 +1,7 @@
+# Đã bật thử lọc nhiễu trên VPS — 2026-11-24
+
+Người dùng đã yêu cầu merge/deploy và bật lọc để thử robot. PR #17 merge production5d5cceb6; Actions45316196051 thành công, runtime chat.audio_preprocess.mode=enforce. Đây là thử nghiệm mic thật, không đồng nghĩa đã đạt toàn bộ tiêu chí câu ngắn/giọng nhỏ/false positives. Firmware/Gipformer/LLM/TTS và capture giữ nguyên. Xem mục phát hành mới nhất trong BACKEND_NOISE_SUPPRESSION.md; không áp dụng các trạng thái “chưa deploy/off” của lịch sử bên dưới cho runtime hiện tại.
+
 # Code lọc nhiễu đã kiểm thử — 2026-11-24
 
 Nhánh feat/backend-noise-suppression, code72e2cf03 đã push. CI Linux45315184231 backend/frontend thành công, local tests/race/vet/actionlint và mock rollback đạt. A/B290 mẫu hoàn tất, số đo theo nhóm tại BACKEND_NOISE_SUPPRESSION.md. Chưa merge/deploy; còn câu ngắn/giọng nhỏ/nhiễu phòng thật và tải DSP trên VPS, chưa đạt nghiệm thu enforce. Agent tiếp theo đọc báo cáo và kế hoạch trước thay đổi hoặc phát hành; giữ firmware và Gipformer.

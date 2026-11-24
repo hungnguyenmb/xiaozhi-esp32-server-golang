@@ -182,3 +182,7 @@ Nhánh feat/backend-noise-suppression. Thêm build native RNNoise v0.1/SpeexDSP 
 Bổ sung cùng nhánh: native self-check tool trong bundle, Actions kiểm tra effective mode shadow/enforce sau HTTP health; native lỗi sẽ rollback binary/config. Mock full script success/native-failure và migration giữ owner/mode/config đạt local. CI đầu45314376269 thành công, chưa chạy deploy.
 
 CI cuối [45315184231](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45315184231) commit72e2cf03 thành công cả backend/frontend. VPS chỉ kiểm tra read-only/benchmark ASR, binary vẫn10ce6728…, không deploy; trạng thái tiếp quản trong BACKEND_NOISE_SUPPRESSION.md.
+
+## 2026-11-24 — merge và bật thử lọc nhiễu
+
+PR17 merge production5d5cceb6. Actions45316196051 thành công với audio_preprocess=enforce; push45316167741 hủy trước deploy. Binary9ec6839f…, native health/self-check PASS, backend healthy/restarts0, config khác/owner/mode giữ nguyên; capture/gate/diagnostics vẫn bật. Admin HTTPS/TLS/OTA/WSS/auth/route isolation đạt. Giữ firmware, Gipformer, LLM/TTS; còn test robot thật. Báo cáo đầy đủ/rollback tại BACKEND_NOISE_SUPPRESSION.md.

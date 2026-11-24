@@ -26,3 +26,5 @@
 - Đang triển khai nhánh feat/backend-noise-suppression: đọc deployment/vps/BACKEND_NOISE_SUPPRESSION.md (cấu hình off/shadow/enforce, native build, replay, số đo và phần chưa đạt) cùng kế hoạch. Chưa merge/deploy; không tự bật enforce hoặc đổi firmware.
 
 - Code lọc nhiễu đã push feat/backend-noise-suppression (72e2cf03), CI Linux45315184231 đạt. Chưa merge/deploy; còn nghiệm thu câu ngắn/giọng nhỏ/robot thật và CPU VPS. Xem BACKEND_NOISE_SUPPRESSION.md trước tiếp tục; mặc định lọc vẫn off.
+
+- Runtime mới nhất2026-11-24: PR17 merge production5d5cceb6, Actions45316196051 deploy thành công/bật audio_preprocess=enforce theo yêu cầu người dùng để thử robot. Gate300 ms/diagnostics/capture giữ bật; health/native/OTA/WSS/admin đạt. Chưa nghiệm thu mic thật. Đọc mục phát hành cuối BACKEND_NOISE_SUPPRESSION.md trước check log/tuning; các ghi chú off/chưa deploy phía trên là lịch sử.

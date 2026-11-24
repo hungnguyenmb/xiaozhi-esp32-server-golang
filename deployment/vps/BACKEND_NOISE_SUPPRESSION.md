@@ -1,3 +1,7 @@
+# Đã bật thử lọc nhiễu trên VPS — 2026-11-24
+
+Người dùng đã yêu cầu merge/deploy và bật lọc để thử robot. PR #17 merge production5d5cceb6; Actions45316196051 thành công, runtime chat.audio_preprocess.mode=enforce. Đây là thử nghiệm mic thật, không đồng nghĩa đã đạt toàn bộ tiêu chí câu ngắn/giọng nhỏ/false positives. Firmware/Gipformer/LLM/TTS và capture giữ nguyên. Xem mục phát hành mới nhất trong BACKEND_NOISE_SUPPRESSION.md; không áp dụng các trạng thái “chưa deploy/off” của lịch sử bên dưới cho runtime hiện tại.
+
 # Bàn giao lọc nhiễu backend — 2026-11-24
 
 ## Hiện trạng
@@ -115,3 +119,16 @@ Dữ liệu riêng tại /tmp/xiaozhi-noise-mixed-20261124-v2 và /tmp/xiaozhi-g
 - CI cuối45315184231 backend/frontend thành công; native tests/race chọn lọc, benchmark generator/config migration/full-script native-failure rollback, vet/build/self-check đã qua Linux. Các giới hạn vet/race cũ của ASR_INPUT_GATE.md vẫn áp dụng, không tuyên bố race toàn repo sạch.
 - VPS kiểm tra read-only vẫn healthy; SHA256 binary10ce67289f12961eda3f85bbb47e6feb4dbd8b800ec0bc4b4bb2546192ac717e không đổi. Chỉ gọi ASR qua tunnel để benchmark, không cài runtime/code mới lên VPS; tunnel đã đóng.
 - Người dùng đã được đề nghị cung cấp thời điểm/các câu thử ngắn; chưa có câu trả lời trong lượt này. Chưa gắn nhãn thêm audio hoặc xác nhận nghiệm thu mic thật. Giữ bộ lọc tắt cho đến bước kiểm chứng tiếp theo.
+
+## Phát hành thử robot — 2026-11-24, 10:03–10:05 UTC+7
+
+- Người dùng chủ động yêu cầu merge production/deploy/bật lọc để thử, thay cho chờ đủ bộ nghiệm thu trước enforce. Không thay ngưỡng mặc định thử .55/.35/.85, RNNoise=true; các giá trị này lấy từ code vì runtime chỉ có mode=enforce.
+- [PR #17](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/pull/17) đã merge production5d5cceb62b1a01641a6454fad5255cf9796278b8.
+- Actions push45316167741 bị hủy ở Build Linux Binary via Docker trước SCP/deploy. [Actions45316196051](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45316196051) workflow_dispatch thành công, audio_preprocess=enforce, các input audio_diagnostics/audio_capture/asr_input_gate=unchanged.
+- Build Docker Linux/native bundle thực tế thành công. Deploy HTTP health và RNNoise/SpeexDSP/TEN native self-check trong container đều PASS. Binary SHA256 mới9ec6839f5edc5b3f98c89bec5d414ead71c997b1f6055a14babd6c5445db86fe; image sha256:d07d60d8d352dc4627a03b399b72b1b230f0199dc189cf811b8c3cdb0b31aa87.
+- Runtime enforce; gate enabled/guard300 ms, diagnostics enabled/interval1000 ms, capture enabled/directory như trước. So với backup main_config.yaml.diagnostics-20261124T030315Z.bak: mọi config ngoài audio_preprocess giống hệt, UID/GID10001:10001/mode0600 giữ nguyên.
+- Backend healthy/restarts0; ASR/Gipformer, PhoWhisper container dự phòng, TTS và gateway không restart. Admin HTTPS200; verify_tls.py kiểm tra certificate/TLS, OTA HTTPS, WSS hello, auth401, internal route404, redirect308 đều PASS.
+- Log probe chỉ thấy setup TEN/auto/asr_auto_end=false; chưa có audio robot thật hoặc AUDIO_PREPROCESS accepted sau phát hành tại thời điểm chốt. Native self-check xác minh thư viện chạy được, không thay thế nghiệm thu VAD/ASR/câu ngắn qua mic vật lý.
+- Bản trước: binary10ce67289f12961eda3f85bbb47e6feb4dbd8b800ec0bc4b4bb2546192ac717e, image sha256:e7025db14b55174504542672b83786716aa179346f3d3d880df6711e924082a5. Nếu thử mất giọng/chậm/tự nói nhiều: Actions production audio_preprocess=off (inputs khác unchanged) hoặc rollback code theo DEPLOYMENT_GUIDE.md khi cần; không xóa recordings, không sửa firmware.
+
+Bước tiếp theo: một câu chào rồi im lặng20–30 giây; thử câu ngắn “dừng/tắt/dạ/không”, giọng nhỏ, tiếng quạt/nhiễu và keyword giữa TTS. Ghi timestamp/câu thật để phân loại các accepted/rejected và xem processing_p95_ms/max_queue. Không suy số robot hỗ trợ từ health probe.
