@@ -260,3 +260,15 @@ func (a *AsrAudioBuffer) ClearAsrAudioData() {
 	defer a.AudioBufferMutex.Unlock()
 	a.PcmData = nil
 }
+
+// KeepLastSamples bounds pre-roll memory while the microphone waits for speech.
+func (a *AsrAudioBuffer) KeepLastSamples(limit int) {
+	a.AudioBufferMutex.Lock()
+	defer a.AudioBufferMutex.Unlock()
+	if limit < 0 {
+		limit = 0
+	}
+	if len(a.PcmData) > limit {
+		a.PcmData = append([]float32(nil), a.PcmData[len(a.PcmData)-limit:]...)
+	}
+}

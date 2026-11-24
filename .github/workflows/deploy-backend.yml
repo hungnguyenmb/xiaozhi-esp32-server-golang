@@ -18,6 +18,7 @@ on:
       - 'config/**'
       - 'deployment/vps/compose.yaml'
       - 'deployment/vps/Dockerfile'
+      - 'deployment/vps/build_rnnoise.sh'
       - 'deployment/vps/otazeroone.nginx.conf'
       - 'deployment/vps/adminzeroone.nginx.conf'
       - 'docker/**'
@@ -26,6 +27,11 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
     inputs:
+      audio_preprocess:
+        description: Experimental backend noise suppression (restart applies to new sessions)
+        type: choice
+        options: [unchanged, off, shadow, enforce]
+        default: unchanged
       audio_diagnostics:
         description: Metadata-only audio diagnostic logging
         type: choice
@@ -74,6 +80,12 @@ jobs:
           mkdir -p dist_backend
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/xiaozhi_server dist_backend/xiaozhi_server
           docker cp xiaozhi_linux:/out/audio_capture_export dist_backend/audio_capture_export
+          docker cp xiaozhi_linux:/out/audio_frontend_replay dist_backend/audio_frontend_replay
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/libxiaozhi_rnnoise_v01.so dist_backend/
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/libspeexdsp.so.1 dist_backend/
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/RNNOISE-COPYING dist_backend/
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/RNNOISE-REVISION dist_backend/
+          docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/SPEEXDSP-COPYRIGHT dist_backend/
           docker rm xiaozhi_linux
           chmod +x dist_backend/xiaozhi_server
 
@@ -83,12 +95,13 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist_backend/xiaozhi_server,dist_backend/audio_capture_export"
+          source: "dist_backend/xiaozhi_server,dist_backend/audio_capture_export,dist_backend/audio_frontend_replay,dist_backend/libxiaozhi_rnnoise_v01.so,dist_backend/libspeexdsp.so.1,dist_backend/RNNOISE-COPYING,dist_backend/RNNOISE-REVISION,dist_backend/SPEEXDSP-COPYRIGHT"
           target: "/tmp"
           strip_components: 1
 
       - name: Deploy and Reload Backend on VPS
         env:
+          AUDIO_PREPROCESS: ${{ inputs.audio_preprocess || 'unchanged' }}
           AUDIO_DIAGNOSTICS: ${{ inputs.audio_diagnostics || 'unchanged' }}
           AUDIO_CAPTURE: ${{ inputs.audio_capture || 'unchanged' }}
           ASR_INPUT_GATE: ${{ inputs.asr_input_gate || 'unchanged' }}
@@ -98,12 +111,15 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: AUDIO_DIAGNOSTICS,AUDIO_CAPTURE,ASR_INPUT_GATE,POST_TTS_GUARD_MS
+          envs: AUDIO_PREPROCESS,AUDIO_DIAGNOSTICS,AUDIO_CAPTURE,ASR_INPUT_GATE,POST_TTS_GUARD_MS
           script: |
             set -eu
             cd /opt/docker/antigravity/xiaozhi-go
+            for artifact in xiaozhi_server audio_capture_export audio_frontend_replay libxiaozhi_rnnoise_v01.so libspeexdsp.so.1 RNNOISE-COPYING RNNOISE-REVISION SPEEXDSP-COPYRIGHT; do
+              test -s "/tmp/$artifact"
+            done
             CONFIG_BACKUP=""
-            if [ "$AUDIO_DIAGNOSTICS" != "unchanged" ] || [ "$AUDIO_CAPTURE" != "unchanged" ] || [ "$ASR_INPUT_GATE" != "unchanged" ]; then
+            if [ "$AUDIO_DIAGNOSTICS" != "unchanged" ] || [ "$AUDIO_CAPTURE" != "unchanged" ] || [ "$ASR_INPUT_GATE" != "unchanged" ] || [ "$AUDIO_PREPROCESS" != "unchanged" ]; then
               CONFIG_BACKUP="runtime/config/main_config.yaml.diagnostics-$(date -u +%Y%m%dT%H%M%SZ).bak"
               cp -p runtime/config/main_config.yaml "$CONFIG_BACKUP"
               chmod 600 "$CONFIG_BACKUP"
@@ -130,6 +146,11 @@ jobs:
                     if not 0 <= guard_ms <= 1000:
                         raise ValueError("guard must be 0..1000 ms")
                     gate["post_tts_guard_ms"] = guard_ms
+            mode = os.environ["AUDIO_PREPROCESS"]
+            if mode not in {"unchanged", "off", "shadow", "enforce"}:
+                raise ValueError("invalid audio preprocess mode")
+            if mode != "unchanged":
+                chat.setdefault("audio_preprocess", {})["mode"] = mode
             original_stat = path.stat()
             temporary = path.with_suffix(".diagnostics.tmp")
             temporary.write_text(yaml.safe_dump(config, allow_unicode=True, sort_keys=False))
@@ -149,7 +170,16 @@ jobs:
             chmod 755 bundle/xiaozhi_server
             mv /tmp/audio_capture_export bundle/audio_capture_export
             chmod 755 bundle/audio_capture_export
+            mv /tmp/audio_frontend_replay bundle/audio_frontend_replay
+            chmod 755 bundle/audio_frontend_replay
             
+            # Versioned optional libraries: old binaries do not load them.
+            mkdir -p bundle/ten-vad/lib/Linux/x64
+            for name in libxiaozhi_rnnoise_v01.so libspeexdsp.so.1 RNNOISE-COPYING RNNOISE-REVISION SPEEXDSP-COPYRIGHT; do
+              mv "/tmp/$name" "bundle/ten-vad/lib/Linux/x64/$name"
+              chmod 644 "bundle/ten-vad/lib/Linux/x64/$name"
+            done
+
             # Rebuild backend container image and restart backend service only
             docker compose build backend
             docker compose up -d --no-deps backend
@@ -166,6 +196,20 @@ jobs:
               echo "Checking backend health... attempt $i/12"
               sleep 3
             done
+
+            EFFECTIVE_PREPROCESS=$(python3 - <<'PYMODE'
+            from pathlib import Path
+            import yaml
+            config = yaml.safe_load(Path("runtime/config/main_config.yaml").read_text())
+            print(config.get("chat", {}).get("audio_preprocess", {}).get("mode", "off"))
+            PYMODE
+            )
+            if [ "$HEALTHY" -eq 1 ] && { [ "$EFFECTIVE_PREPROCESS" = "shadow" ] || [ "$EFFECTIVE_PREPROCESS" = "enforce" ]; }; then
+              if ! docker compose exec -T backend /app/audio_frontend_replay -check-native; then
+                echo "Native preprocessing check failed"
+                HEALTHY=0
+              fi
+            fi
 
             if [ "$HEALTHY" -ne 1 ]; then
               echo "Backend health check failed! Rolling back to previous binary..."

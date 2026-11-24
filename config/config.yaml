@@ -11,6 +11,12 @@ auth:
 
 # 聊天配置
 chat:
+  audio_preprocess:
+    mode: off # off|shadow|enforce; experimental, not enabled on VPS
+    denoise: true # RNNoise v0.1 + SpeexDSP, 16 kHz mono/TEN server endpoint only
+    start: 0.55 # Candidate onset, not a production-calibrated threshold
+    continue: 0.35
+    strong: 0.85 # One strong 32 ms hop may preserve a very short syllable
   asr_input_gate:
     enabled: true
     post_tts_guard_ms: 300 # Only auto-resume; wake-word abort/detect bypasses
