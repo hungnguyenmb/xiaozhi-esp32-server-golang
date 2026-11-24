@@ -97,3 +97,7 @@ TEN từng bỏ phần mẫu không đủ hop512 ở cuối mỗi packet; +1.0 f
 ## 2026-11-24 — đơn vị PCM trong bộ tạo benchmark
 
 Generator mix ban đầu scale PCM int16 như float chuẩn hóa nên mẫu chỉ còn xấp xỉ±1, không hợp lệ để đánh giá. Đã sửa headroom0.95*32767, thêm regression SNR20 dB và amplitude/clipping. Loại toàn bộ kết quả suitev1 khỏi báo cáo, chạy lại290 mẫu ở thư mụcv2; không xóa recordings cũ. Không nhầm lỗi tạo test data với model bỏ sót speech.
+
+## 2026-11-24 — lỗi400 multi-tool và false positives trên mic thật
+
+Sau enforce, native pipeline hoạt động nhưng VAD vẫn nhận nền (score~0.77, và lượt96 ms score~0.61). Đồng thời AlignToolMessages nhân đôi assistant có2 tool calls, khiến OpenAI400 lặp lại; handler đọc lỗi kỹ thuật ra TTS. Đã đối chiếu logs/DB/source và snapshot audio, chưa sửa runtime/code. Bằng chứng và hướng xử lý: NOISE_ROBOT_TEST_20261124.md.
