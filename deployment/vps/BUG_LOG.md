@@ -93,3 +93,7 @@ Phát hiện khi rà soát release: endpoint đóng gate nhưng ASR rỗng khôn
 ## 2026-11-24 — mẫu dư TEN và nhận nền sau gate (nhánh thử)
 
 TEN từng bỏ phần mẫu không đủ hop512 ở cuối mỗi packet; +1.0 float có thể wrap thành -32768. Đã thêm FIFO/reset/saturation và tests độc lập kích thước packet. Không coi đây là nguyên nhân duy nhất của robot tự trả lời: noise ngoài guard vẫn có thể vào ASR. Đã thêm preprocessing/onset thử nghiệm, mặc định tắt; cần benchmark/robot theo BACKEND_NOISE_SUPPRESSION.md trước phát hành.
+
+## 2026-11-24 — đơn vị PCM trong bộ tạo benchmark
+
+Generator mix ban đầu scale PCM int16 như float chuẩn hóa nên mẫu chỉ còn xấp xỉ±1, không hợp lệ để đánh giá. Đã sửa headroom0.95*32767, thêm regression SNR20 dB và amplitude/clipping. Loại toàn bộ kết quả suitev1 khỏi báo cáo, chạy lại290 mẫu ở thư mụcv2; không xóa recordings cũ. Không nhầm lỗi tạo test data với model bỏ sót speech.

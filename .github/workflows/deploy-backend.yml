@@ -80,6 +80,7 @@ jobs:
           mkdir -p dist_backend
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/xiaozhi_server dist_backend/xiaozhi_server
           docker cp xiaozhi_linux:/out/audio_capture_export dist_backend/audio_capture_export
+          docker cp xiaozhi_linux:/out/audio_frontend_replay dist_backend/audio_frontend_replay
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/libxiaozhi_rnnoise_v01.so dist_backend/
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/libspeexdsp.so.1 dist_backend/
           docker cp xiaozhi_linux:/out/linux-amd64/xiaozhi_server-linux-amd64/ten-vad/lib/Linux/x64/RNNOISE-COPYING dist_backend/
@@ -94,7 +95,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist_backend/xiaozhi_server,dist_backend/audio_capture_export,dist_backend/libxiaozhi_rnnoise_v01.so,dist_backend/libspeexdsp.so.1,dist_backend/RNNOISE-COPYING,dist_backend/RNNOISE-REVISION,dist_backend/SPEEXDSP-COPYRIGHT"
+          source: "dist_backend/xiaozhi_server,dist_backend/audio_capture_export,dist_backend/audio_frontend_replay,dist_backend/libxiaozhi_rnnoise_v01.so,dist_backend/libspeexdsp.so.1,dist_backend/RNNOISE-COPYING,dist_backend/RNNOISE-REVISION,dist_backend/SPEEXDSP-COPYRIGHT"
           target: "/tmp"
           strip_components: 1
 
@@ -114,7 +115,7 @@ jobs:
           script: |
             set -eu
             cd /opt/docker/antigravity/xiaozhi-go
-            for artifact in xiaozhi_server audio_capture_export libxiaozhi_rnnoise_v01.so libspeexdsp.so.1 RNNOISE-COPYING RNNOISE-REVISION SPEEXDSP-COPYRIGHT; do
+            for artifact in xiaozhi_server audio_capture_export audio_frontend_replay libxiaozhi_rnnoise_v01.so libspeexdsp.so.1 RNNOISE-COPYING RNNOISE-REVISION SPEEXDSP-COPYRIGHT; do
               test -s "/tmp/$artifact"
             done
             CONFIG_BACKUP=""
@@ -169,6 +170,8 @@ jobs:
             chmod 755 bundle/xiaozhi_server
             mv /tmp/audio_capture_export bundle/audio_capture_export
             chmod 755 bundle/audio_capture_export
+            mv /tmp/audio_frontend_replay bundle/audio_frontend_replay
+            chmod 755 bundle/audio_frontend_replay
             
             # Versioned optional libraries: old binaries do not load them.
             mkdir -p bundle/ten-vad/lib/Linux/x64
@@ -193,6 +196,20 @@ jobs:
               echo "Checking backend health... attempt $i/12"
               sleep 3
             done
+
+            EFFECTIVE_PREPROCESS=$(python3 - <<'PYMODE'
+            from pathlib import Path
+            import yaml
+            config = yaml.safe_load(Path("runtime/config/main_config.yaml").read_text())
+            print(config.get("chat", {}).get("audio_preprocess", {}).get("mode", "off"))
+            PYMODE
+            )
+            if [ "$HEALTHY" -eq 1 ] && { [ "$EFFECTIVE_PREPROCESS" = "shadow" ] || [ "$EFFECTIVE_PREPROCESS" = "enforce" ]; }; then
+              if ! docker compose exec -T backend /app/audio_frontend_replay -check-native; then
+                echo "Native preprocessing check failed"
+                HEALTHY=0
+              fi
+            fi
 
             if [ "$HEALTHY" -ne 1 ]; then
               echo "Backend health check failed! Rolling back to previous binary..."

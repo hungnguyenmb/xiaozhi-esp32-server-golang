@@ -90,7 +90,7 @@ def mix(pcm, rate, snr, kind, rng):
     # Joint scaling preserves SNR while avoiding clipping; do not peak-normalize
     # the speech and noise independently after mixing.
     peak = max(abs(x) for x in combined)
-    scale = min(1, .95 / peak) if peak else 1
+    scale = min(1, .95 * 32767 / peak) if peak else 1
     return [max(-32768, min(32767, round(x * scale))) for x in combined]
 
 

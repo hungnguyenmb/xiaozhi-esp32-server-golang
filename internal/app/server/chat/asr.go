@@ -274,6 +274,9 @@ func (a *ASRManager) ProcessVadAudio(ctx context.Context) {
 					continue
 				}
 
+				if depth := len(state.OpusAudioBuffer); depth > preprocess.maxQueued {
+					preprocess.maxQueued = depth
+				}
 				preparedFrames, processErr := preprocess.Process(pcmFrame[:n])
 				if processErr != nil {
 					state.AudioInput.Block()

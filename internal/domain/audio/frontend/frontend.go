@@ -122,6 +122,7 @@ func (d *onsetDetector) observe(probability float32, c Config) (bool, string) {
 	// Two start hits in three native windows (max 96 ms), or one strong window.
 	// A brief weak gap does not erase a real short syllable. Pre-roll is retained
 	// by the caller until acceptance, so confirmation never trims the onset.
+	previous := d.evidence
 	d.evidence = (d.evidence << 1) & 7
 	if probability >= c.Start {
 		d.evidence |= 1
@@ -136,6 +137,9 @@ func (d *onsetDetector) observe(probability float32, c Config) (bool, string) {
 	}
 	if d.evidence != 0 {
 		return false, "candidate"
+	}
+	if previous != 0 {
+		return false, "rejected"
 	}
 	return false, ""
 }

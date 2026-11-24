@@ -50,6 +50,7 @@ type report struct {
 
 func main() {
 	var o options
+	check := flag.Bool("check-native", false, "validate native engine and resampler without network/audio files")
 	flag.StringVar(&o.input, "input", "", "capture directory, requires -windows")
 	flag.StringVar(&o.windows, "windows", "", "private JSON [{Start,End,guard_ms}], timestamps RFC3339")
 	flag.StringVar(&o.wav, "wav", "", "one PCM16/16k/mono WAV")
@@ -63,6 +64,19 @@ func main() {
 	flag.IntVar(&o.tail, "tail-ms", 0, "WAV-only synthetic silence to drain DSP; reported separately, not endpoint latency")
 	flag.IntVar(&o.silence, "silence-ms", 500, "strict endpoint silence threshold; use effective live value")
 	flag.Parse()
+	if *check {
+		p, err := frontend.New(frontend.DefaultConfig())
+		if err == nil {
+			_, err = p.Process(make([]float32, 960))
+			p.Close()
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println("RNNoise/SpeexDSP/TEN native check passed")
+		return
+	}
 	reports, err := run(o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

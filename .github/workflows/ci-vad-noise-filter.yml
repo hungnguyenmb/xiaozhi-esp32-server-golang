@@ -69,6 +69,8 @@ jobs:
           # InitLlm has an existing lostcancel finding; keep every other analyzer.
           go vet -lostcancel=false -tags nolibopusfile ./internal/data/client
           go build -tags nolibopusfile -o "$RUNNER_TEMP/xiaozhi-vad-check" ./cmd/server
+          go build -tags nolibopusfile -o "$RUNNER_TEMP/audio-frontend-replay" ./cmd/audio-frontend-replay
+          "$RUNNER_TEMP/audio-frontend-replay" -check-native
 
   frontend:
     runs-on: ubuntu-latest

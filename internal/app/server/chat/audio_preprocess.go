@@ -3,6 +3,7 @@ package chat
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/spf13/viper"
@@ -31,6 +32,8 @@ type audioPreprocess struct {
 	rate, channels, silence      int
 	eligible, failed             bool
 	frames, accepted, candidates int
+	rejected, maxQueued          int
+	timings                      []float64
 	rawSquares, cleanSquares     float64
 	rawSamples, cleanSamples     int
 	elapsed                      time.Duration
@@ -110,7 +113,11 @@ func (p *audioPreprocess) Process(pcm []float32) ([]preparedAudio, error) {
 	}
 	start := time.Now()
 	frames, err := p.processor.Process(pcm)
-	p.elapsed += time.Since(start)
+	elapsed := time.Since(start)
+	p.elapsed += elapsed
+	if len(p.timings) < 256 {
+		p.timings = append(p.timings, float64(elapsed)/float64(time.Millisecond))
+	}
 	if err != nil {
 		// Do not splice dry samples into an active delayed/denoised turn. The live
 		// caller closes/retries the ASR turn; bypass begins only in that new epoch.
@@ -149,10 +156,19 @@ func (p *audioPreprocess) Process(pcm []float32) ([]preparedAudio, error) {
 			}
 			return math.Sqrt(sum / float64(n))
 		}
-		log.Infof("AUDIO_PREPROCESS interval device=%s session=%s mode=%s frames=%d accepted=%d candidates=%d raw_rms=%.6f clean_rms=%.6f processing_ms=%.3f", p.device, p.session, p.mode, p.frames, p.accepted, p.candidates, rms(p.rawSquares, p.rawSamples), rms(p.cleanSquares, p.cleanSamples), float64(p.elapsed)/float64(time.Millisecond))
+		sorted := append([]float64(nil), p.timings...)
+		sort.Float64s(sorted)
+		p95 := 0.0
+		if len(sorted) > 0 {
+			p95 = sorted[int(math.Ceil(float64(len(sorted))*.95))-1]
+		}
+		log.Infof("AUDIO_PREPROCESS interval device=%s session=%s mode=%s frames=%d accepted=%d candidates=%d rejected=%d max_queue=%d processing_p95_ms=%.3f raw_rms=%.6f clean_rms=%.6f processing_ms=%.3f", p.device, p.session, p.mode, p.frames, p.accepted, p.candidates, p.rejected, p.maxQueued, p95, rms(p.rawSquares, p.rawSamples), rms(p.cleanSquares, p.cleanSamples), float64(p.elapsed)/float64(time.Millisecond))
 		p.frames = 0
 		p.accepted = 0
 		p.candidates = 0
+		p.rejected = 0
+		p.maxQueued = 0
+		p.timings = nil
 		p.rawSquares = 0
 		p.cleanSquares = 0
 		p.rawSamples = 0
@@ -177,7 +193,10 @@ func (p *audioPreprocess) Prepare(f preparedAudio) preparedAudio {
 	p.frames++
 	if f.Event == "accepted" {
 		p.accepted++
-		log.Infof("AUDIO_PREPROCESS accepted device=%s session=%s epoch=%d score=%.4f", p.device, p.session, p.epoch, f.Probability)
+		log.Infof("AUDIO_PREPROCESS accepted device=%s session=%s mode=%s epoch=%d score=%.4f", p.device, p.session, p.mode, p.epoch, f.Probability)
+	}
+	if f.Event == "rejected" {
+		p.rejected++
 	}
 	if f.Event == "candidate" {
 		p.candidates++

@@ -2,7 +2,7 @@
 
 ## Hiện trạng
 
-Nhánh feat/backend-noise-suppression từ production06ab4ed7, đang kiểm thử. Người dùng yêu cầu triển khai code theo BACKEND_NOISE_SUPPRESSION_PLAN.md. Chưa merge/deploy, runtime VPS giữ nguyên. Đừng tự coi code đã đạt mọi tiêu chí chất lượng.
+Nhánh feat/backend-noise-suppression từ production06ab4ed7, đã có code thử, đang hoàn tất CI. Người dùng yêu cầu triển khai code theo BACKEND_NOISE_SUPPRESSION_PLAN.md. Chưa merge/deploy, runtime VPS giữ nguyên. Đừng tự coi code đã đạt mọi tiêu chí chất lượng.
 
 ## Đường xử lý đã có
 
@@ -26,9 +26,9 @@ chat:
     strong: 0.85
 ```
 
-Đây là config thử, chưa chốt ngưỡng production. Chỉ16 kHz mono/TEN/server endpoint; manual/ASR AutoEnd/provider khác giữ đường cũ. Không có section hoặc mode=off thì không nạp DSP; bật/tắt qua restart cho phiên mới. Shadow chỉ log metadata và giữ PCM/quyết định cũ, không tạo thêm chat/LLM/TTS.
+Đây là config thử, chưa chốt ngưỡng production. Khi bật, frontend dùng ngưỡng trong chat.audio_preprocess thay cho ngưỡng VAD của provider DB; không tự sửa DB, chỉnh giao diện VAD cũ không đổi ngưỡng frontend. Chỉ16 kHz mono/TEN/server endpoint; manual/ASR AutoEnd/provider khác giữ đường cũ. Không có section hoặc mode=off thì không nạp DSP; bật/tắt qua restart cho phiên mới. Shadow chỉ log metadata và giữ PCM/quyết định cũ, không tạo thêm chat/LLM/TTS.
 
-AUDIO_PREPROCESS setup/bypass/accepted/interval ghi mode/epoch/ngưỡng/delay native/RMS/processing time và counters; không log transcript/audio. AUDIO_DIAG vẫn theo dõi VAD/endpoint/ASR. Native delay không bao gồm packet buffering, hop FIFO, xác nhận onset hoặc mạng. Chưa có adaptive noise floor, không ghi processed audio song song tự động.
+AUDIO_PREPROCESS setup/bypass/accepted/interval ghi mode/epoch/ngưỡng/delay native/RMS/processing time và counters; có processing_p95_ms (tối đa256 chunk đầu mỗi kỳ1s), max_queue input và rejected/candidate/accepted. Đây là thời gian xử lý DSP theo chunk, không phải p95 latency đầu-cuối. Không log transcript/audio. AUDIO_DIAG vẫn theo dõi VAD/endpoint/ASR. Native delay không bao gồm packet buffering, hop FIFO, xác nhận onset hoặc mạng. Chưa có adaptive noise floor, không ghi processed audio song song tự động.
 
 ## Build/test cục bộ
 
@@ -67,15 +67,15 @@ Không -include-text thì không có transcript trong JSON; chấm WER cần b�
 
 ## Bằng chứng sơ bộ và giới hạn
 
-- Local macOS ARM native tests full packages liên quan/race chọn lọc/vet/actionlint đạt ở thời điểm ghi; CI Linux còn chờ. Docker daemon local không chạy nên chưa build Docker đầy đủ. Kiểm tra run CI trước merge.
+- Local macOS ARM native tests full packages liên quan/race chọn lọc/vet/actionlint đạt ở thời điểm ghi; CI Linux lần đầu [45314376269](https://github.com/hungnguyenmb/xiaozhi-esp32-server-golang/actions/runs/45314376269) đạt backend+frontend (commit5458b79f); đang chạy lại cho các bổ sung cuối. Docker daemon local không chạy nên chưa build Docker đầy đủ. Kiểm tra run CI trước merge.
 - Suite cũ50 mẫu:30 FLEURS tiếng Việt +20 synthetic noise/silence, không phải50 câu nói sạch. Config thử .55/.35/.85+RNNoise mở đủ30speech, không mở20noise. WER4.28% (20/467) so raw Gipformer4.07% (19/467) đo lại qua SSH tunnel ASR hiện hữu. Raw-ASR-only không có VAD lọc20noise và trả text cả20; script verify vì vậy exit1 sau khi in JSON, đây là kết quả hồi quy tiếng nền chứ không phải benchmark bị mất dữ liệu. Phép so WER này chưa padded EOF, còn Open segments; không dùng như nghiệm thu mất đầu/cuối câu.
 - Snapshot robot23 cửa sổ: frontend .55/.35/.85 chưa denoise mở13 lượt; có denoise mở6, gồm câu chào đầu. Thử .65/.40/.90 mở3. Vẫn còn nền nghi ngờ, nhãn “các cửa sổ sau đều noise” chưa được xác nhận độc lập cho phiên mới. Không suy FPR/giờ từ tập ngắn này và không chọn ngưỡng bằng chỉ1 câu chào.
 - RTF DSP sơ bộ~0.026 trên Mac, không phảiCPU VPS. ASR gọi trên VPS nhưng DSP chạy local; chưa benchmark1/3/5 luồng DSP+ASR+TTS trên VPS, chưa có p95 latency tổng hợp.
-- Chưa đủ200 câu ngắn/nhiều giọng/phòng, chưa gắn nhãn onset/offset, chưa kiểm tra keyword/robot thật trên code mới. Vì vậy chưa đạt tiêu chí enforce production. Benchmark speech+noise đang tiếp tục; cập nhật số cuối trước bàn giao.
+- Chưa đủ200 câu ngắn/nhiều giọng/phòng, chưa gắn nhãn onset/offset, chưa kiểm tra keyword/robot thật trên code mới. Vì vậy chưa đạt tiêu chí enforce production. Benchmark speech+noise đã có kết quả bên dưới; vẫn thiếu dữ liệu ngắn/giọng nhỏ/nhãn robot thật.
 
 ## Phát hành/quay lui
 
-Actions deploy-backend có input audio_preprocess=unchanged/off/shadow/enforce, defaultunchanged; migration chỉ thay mode, giữ config khác/owner/mode và backup/health rollback hiện hữu. Artifact libs và license được kiểm tra đủ trước đổi config/binary. Không gọi workflow ở nhánh tính năng để deploy (chỉproduction). Code mới không tự bật lọc trên VPS.
+Actions deploy-backend có input audio_preprocess=unchanged/off/shadow/enforce, defaultunchanged; migration chỉ thay mode, giữ config khác/owner/mode và backup/health rollback hiện hữu. Artifact binary/tool/libs/license được kiểm tra đủ trước đổi config/binary. Khi effective mode là shadow/enforce, health chạy /app/audio_frontend_replay -check-native trong container; lỗi nạp/chạy native kích hoạt rollback như health failure. Không gọi workflow ở nhánh tính năng để deploy (chỉproduction). Code mới không tự bật lọc trên VPS.
 
 Sau benchmark/CI/robot đạt mới đề xuất shadow rồi enforce. Nếu mất câu/CPU tăng/lỗi native: Actions mode=off hoặc rollback binary/image nếu crash; giữ gate/capture/firmware/Gipformer. Thư viện mới có tên riêng/pinned, bản cũ không nạp RNNoise. Không xóa audio để quay lui.
 
@@ -86,3 +86,25 @@ Sau benchmark/CI/robot đạt mới đề xuất shadow rồi enforce. Nếu m�
 3. Xử lý các cửa sổ nền còn lọt mà không hy sinh lời nhỏ/câu ngắn; nếu RNNoise chưa đạt, đánh giá mức lọc/DeepFilterNet theo kế hoạch, không tự cài cả hai trên production.
 4. Đo trên VPS dưới tải thực, xem p95 và queue/drop; chỉ công bố số robot đồng thời đã đo.
 5. Chỉ merge/deploy khi được yêu cầu sau review; nghiệm thu và lưu run IDs/kết quả thực. Không thay firmware.
+
+## A/B speech+noise hoàn tất — 2026-11-24
+
+Bộ hiệu chỉnh/replay290 mẫu:30 FLEURS gốc,240 bản trộn cùng30 câu với fan/click ở0/5/10/20 dB SNR,20 noise/silence tổng hợp. Denoise và bypass dùng cùng frontend/onset .55/.35/.85, thêm600 ms silence ở EOF để drain DSP; padding báo riêng. ASR Gipformer trên VPS qua SSH tunnel, DSP trên Mac, không gọi LLM/TTS. Chạy hai nhánh benchmark đồng thời nên không dùng ASR wall-time để kết luận latency production.
+
+| Nhóm (30 câu/nhóm) | WER bypass denoise | WER RNNoise | Bỏ sót cả câu RNNoise |
+|---|---:|---:|---:|
+| Clean |3.64%|4.28%|0/30|
+| Fan0 dB |8.57%|9.42%|0/30|
+| Fan5 dB |5.14%|5.78%|0/30|
+| Fan10 dB |4.28%|4.93%|0/30|
+| Fan20 dB |3.85%|4.50%|0/30|
+| Click0 dB |7.28%|6.42%|0/30|
+| Click5 dB |5.35%|5.57%|0/30|
+| Click10 dB |5.57%|4.71%|0/30|
+| Click20 dB |3.64%|4.28%|0/30|
+
+20 mẫu không có lời: bypass denoise mở1/20, RNNoise0/20. Điều này chỉ xác nhận tập synthetic ngắn này; không phải tỉ lệ false accept/giờ của môi trường thật. Native/resampler delay15 ms, không tính FIFO32 ms/onset/packet/mạng; DSP RTF gộp~0.029 trên Mac. Không tuyên bố nhiều robot/VPS CPU đã đạt.
+
+Kết luận: RNNoise có lợi trên một số tiếng va chạm và nền, nhưng không luôn cải thiện ASR; mọi nhóm giữ đủ câu, WER tăng nhiều nhất~0.86 điểm phần trăm. Đây là tập calibration có chung30 câu, chưa là kiểm định độc lập, chưa có200 câu ngắn. Không đổi default threshold lên.65 từ chỉ một bản ghi. Giữ off/shadow trước enforce.
+
+Dữ liệu riêng tại /tmp/xiaozhi-noise-mixed-20261124-v2 và /tmp/xiaozhi-gate-audio-20261124 trên máy làm việc; không có transcript/audio trong Git. Bộ v1 bị lỗi scale PCM int16 trong generator, không dùng kết quả; đã sửa scale theo32767 và thêm test kiểm chứng SNR/amplitude, giữ bản cũ để tra cứu thay vì xóa. Khi máy dọn /tmp cần lấy lại capture từ VPS và tạo suite mới; không coi đường dẫn tạm là bản lưu trữ dài hạn.

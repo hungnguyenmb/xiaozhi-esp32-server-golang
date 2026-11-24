@@ -178,3 +178,5 @@ Code gate auto/epoch/guard, snapshot ASR trước reset và keyword abort giữ 
 ## 2026-11-24 — chuẩn bị code lọc nhiễu, chưa deploy
 
 Nhánh feat/backend-noise-suppression. Thêm build native RNNoise v0.1/SpeexDSP và đóng gói libs/license, CI Linux tests, input Actions audio_preprocess=unchanged/off/shadow/enforce và migration giữ config/permissions. Tests local config migration/bypass/shadow/native/frame boundaries đạt; chưa gọi Actions deploy, VPS giữ nguyên. Xem BACKEND_NOISE_SUPPRESSION.md để tiếp tục và xác minh CI/benchmark.
+
+Bổ sung cùng nhánh: native self-check tool trong bundle, Actions kiểm tra effective mode shadow/enforce sau HTTP health; native lỗi sẽ rollback binary/config. Mock full script success/native-failure và migration giữ owner/mode/config đạt local. CI đầu45314376269 thành công, chưa chạy deploy.

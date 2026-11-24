@@ -1,3 +1,7 @@
+# Bàn giao code lọc nhiễu — 2026-11-24
+
+Nhánh feat/backend-noise-suppression, code/core+replay+native packaging đã có. A/B290 mẫu hoàn tất, không bỏ cả câu ở270 mẫu có lời nhưng chưa có đủ câu ngắn/giọng nhỏ; noise thật còn lọt. CI Linux đầu45314376269 đạt; đang chạy lại cho bổ sung diagnostics/self-check deploy/test generator. Chưa merge/deploy, giữ bộ lọc off. Xem BACKEND_NOISE_SUPPRESSION.md (số đo/commands/phần chưa đạt) và kế hoạch để tiếp tục. Không tự bật enforce chỉ vì test synthetic đạt.
+
 # Đang triển khai lọc nhiễu — 2026-11-24
 
 Nhánh feat/backend-noise-suppression từ production06ab4ed7. Đã có FIFO TEN, RNNoise/SpeexDSP, frontend onset/pre-roll, off/shadow/enforce, diagnostics, replay và benchmark harness. Test local đạt; đang A/B mixed speech+noise và chuẩn bị CI Linux. Chưa merge/deploy; chưa đạt nghiệm thu câu ngắn/robot thật. Đọc BACKEND_NOISE_SUPPRESSION.md và BACKEND_NOISE_SUPPRESSION_PLAN.md để tiếp tục; không tự bật enforce từ benchmark sơ bộ.
